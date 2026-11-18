@@ -3,6 +3,7 @@ import { AgentKnowledgeReferences } from './components/AgentKnowledgeReferences'
 import { DeleteChatDialog } from './components/DeleteChatDialog'
 import { createRequestId } from './lib/request-id'
 import { isBankingQuery, type BankScopeResolved, type BankScopeResult, type BankSelection } from './lib/banking'
+import { agentSourceLabels, mentionsAgentSource, resolveAgentReportScope } from './lib/agent-report-scope'
 import { AgentTemplateDialog } from './components/AgentTemplateDialog'
 import { useTableSort, type TableSort } from './lib/table-sort'
 import { SortHeader } from './components/TableSort'
@@ -1696,56 +1697,21 @@ type PendingAgentScopeClarification = {
   banking?: BankScopeResolved
 }
 
-function normalizeAgentScopeText(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
-}
-
-function queryMentionsAgentDate(value: string) {
-  return /(hari ini|kemarin|tadi|sekarang|bulan ini|bulan lalu|minggu ini|minggu lalu|tahun ini|tahun lalu|tanggal|tgl|s\/d|sd|hingga|sampai|januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)/i.test(value)
-    || /\b20\d{2}[-/]\d{1,2}[-/]\d{1,2}\b/.test(value)
-}
-
-function queryMentionsAgentSource(value: string, sources: AgentStatus['sources']) {
-  const normalized = normalizeAgentScopeText(value)
-  if (/(semua toko|semua cabang|seluruh toko|seluruh cabang|semua sumber)/i.test(normalized)) return true
-  return sources.some(source => [source.alias, source.branchId].some(label => {
-    const normalizedLabel = normalizeAgentScopeText(label)
-    return Boolean(normalizedLabel) && normalized.includes(normalizedLabel)
-  }))
-}
-
-function sourceLabels(source: AgentStatus['sources'][number]) {
-  const shortAlias = source.alias.replace(/^ITALY\s+/i, '').replace(/\s*\([^)]*\)\s*$/, '').trim()
-  return [...new Set([source.alias, source.branchId, shortAlias, source.alias.replace(/^ITALY\s+/i, '').trim()].filter(Boolean))]
-}
-
-function mentionsSource(value: string, source: AgentStatus['sources'][number]) {
-  const normalized = ` ${normalizeAgentScopeText(value)} `
-  return sourceLabels(source).some(label => {
-    const normalizedLabel = normalizeAgentScopeText(label)
-    return normalizedLabel.length > 1 && normalized.includes(` ${normalizedLabel} `)
-  })
-}
-
 function bankingFollowUpPrompt(value: string, messages: AgentChatMessage[], sources: AgentStatus['sources']) {
   if (isBankingQuery(value) || !/\b(?:kalau|kalo|klo|terus|untuk|sekarang|yang)\b/i.test(value)) return null
-  const mentionedSources = sources.filter(source => mentionsSource(value, source))
+  const mentionedSources = sources.filter(source => mentionsAgentSource(value, source))
   if (mentionedSources.length !== 1) return null
   const previousBankingPrompt = [...messages].reverse().find(message => message.role === 'user' && isBankingQuery(message.content))?.content
   if (!previousBankingPrompt) return null
 
   let prompt = previousBankingPrompt
-  const labels = sources.flatMap(sourceLabels).sort((left, right) => right.length - left.length)
+  const labels = sources.flatMap(agentSourceLabels).sort((left, right) => right.length - left.length)
   for (const label of labels) {
     const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
     prompt = prompt.replace(new RegExp(`(^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, 'gi'), '$1 ')
   }
   const source = mentionedSources[0]
   return `${prompt.replace(/\s+/g, ' ').trim()} Toko yang diminta: ${source.alias} (${source.branchId}).`
-}
-
-function isAgentReportQuery(value: string) {
-  return /(penjualan|pembelian|otorisasi|marketplace|rongsok|transaksi|login|transfer|debit|debet|credit|non cash|non-cash|harga online|laporan|data|pengiriman|penerimaan)/i.test(value)
 }
 
 function formatAgentNaturalDate(value: string) {
@@ -2191,16 +2157,14 @@ export function AgentPage() {
       } finally { setBankingScopeBusy(false); setChatProgress(null) }
     }
 
-    const canClarifyScope = !banking && !retrying && !skipScopeClarification && !pendingAttachments.length && content === draft.trim() && isAgentReportQuery(content)
-    if (canClarifyScope) {
-      const needsDate = !queryMentionsAgentDate(content)
-      const needsSource = !queryMentionsAgentSource(content, status.sources)
-      if (needsDate || needsSource) {
-        setPendingScopeClarification({ prompt: content, needsDate, needsSource })
-        setDraft('')
-        setSendError(null)
-        return
-      }
+    const reportScope = !banking && !retrying && !skipScopeClarification && !attachmentsToSend.length
+      ? resolveAgentReportScope(content, status.sources)
+      : null
+    if (reportScope && (reportScope.needsDate || reportScope.needsSource)) {
+      setPendingScopeClarification({ prompt: content, ...reportScope })
+      setDraft('')
+      setSendError(null)
+      return
     }
 
     let requestId: string
