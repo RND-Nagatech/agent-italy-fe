@@ -1,0 +1,23 @@
+/* Shared headers for application, modal and agent tables. */
+body .page-content table thead th, body dialog table thead th {
+  background: #f3f6fa; color: #526176; font-size: 12px; font-weight: 600;
+  line-height: 1.5; padding: 14px 18px; border-top: 1px solid #e7edf4;
+  border-bottom: 1px solid #dbe3ed; vertical-align: middle;
+  white-space: normal; overflow-wrap: anywhere; letter-spacing: 0;
+}
+body .page-content table thead th small { display: block; margin-top: 3px; font-size: 11px; font-weight: 400; color: #718096; }
+body .page-content table thead .table-sort-button {
+  display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px;
+  width: 100%; padding: 0; border: 0; background: transparent; color: inherit;
+  font: inherit; line-height: inherit; text-align: inherit; cursor: pointer;
+}
+body .page-content table thead th.is-number { text-align: right; }
+body .page-content table thead th.is-number .table-sort-button { justify-content: flex-end; text-align: right; }
+body .page-content table thead .table-sort-button svg { flex-shrink: 0; color: #8290a3; }
+body .page-content table thead .table-sort-button:hover, body .page-content table thead .table-sort-button.is-active svg { color: #2463ff; }
+body .page-content table thead .table-sort-button:focus-visible { outline: 2px solid #2463ff; outline-offset: 5px; border-radius: 3px; }
+body .page-content table tbody tr:hover { background-color: #fafbfe; }
+body .page-content .inventory-branch-table thead th:first-child { width: 125px; }
+body .page-content .inventory-branch-table thead th:first-child .table-sort-button span { white-space: nowrap; }
+
+body .page-content table tbody td.is-number, body dialog table tbody td.is-number { text-align: right; font-variant-numeric: tabular-nums; }

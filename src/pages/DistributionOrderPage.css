@@ -1,0 +1,49 @@
+.distribution-order-page { display: grid; gap: 16px; }
+.distribution-order-page > .page-heading { margin-bottom: 0; align-items: end; }
+.distribution-order-page > .page-heading .eyebrow { margin: 0 0 5px; color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: .12em; }
+.distribution-order-actions { display: flex; align-items: center; gap: 8px; }
+.distribution-order-guidance { display: grid; grid-template-columns: minmax(150px, .35fr) minmax(0, 1fr); gap: 14px; align-items: start; padding: 15px 18px; border: 1px solid #dce5f4; border-radius: 10px; background: #f8faff; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.distribution-order-guidance strong { color: var(--text); font-weight: 650; }
+.distribution-order-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.distribution-order-card { min-width: 0; overflow: hidden; }
+.distribution-order-card-header { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding: 18px 20px 15px; border-bottom: 1px solid var(--border); }
+.distribution-order-card-header > div { min-width: 0; }
+.distribution-order-card-header .card-title { color: var(--text); font-size: 14px; line-height: 21px; }
+.distribution-order-letter { display: grid; place-items: center; min-width: 19px; height: 19px; padding: 0 3px; color: currentColor; font-size: 10px; font-weight: 700; }
+.distribution-order-card-header p { margin: 5px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.distribution-order-count { flex: 0 0 auto; padding: 4px 8px; border: 1px solid var(--border); border-radius: 99px; color: var(--text-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.distribution-order-add { display: grid; gap: 7px; padding: 14px 20px; }
+.distribution-order-add label { color: var(--text-secondary); font-size: 11px; font-weight: 600; }
+.distribution-order-add > div { display: flex; gap: 8px; }
+.distribution-order-add select { min-width: 0; min-height: 39px; flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: white; color: var(--text); font: inherit; font-size: 11px; }
+.distribution-order-list { display: grid; gap: 0; margin: 0; padding: 0 20px; list-style: none; }
+.distribution-order-item { display: flex; align-items: center; gap: 12px; min-height: 58px; border-top: 1px solid var(--border); }
+.distribution-order-rank { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 auto; border-radius: 8px; background: #f3f5f8; color: var(--text-secondary); font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.distribution-order-branch { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.distribution-order-branch strong { overflow: hidden; color: var(--text); font-size: 12px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
+.distribution-order-branch small { color: var(--text-muted); font-size: 10px; }
+.distribution-order-controls { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+.distribution-order-controls .icon-button { width: 30px; height: 30px; color: var(--text-secondary); }
+.distribution-order-controls .icon-button:hover:not(:disabled) { background: #f1f4f8; }
+.distribution-order-controls .icon-button:disabled { opacity: .35; cursor: not-allowed; }
+.distribution-order-controls .distribution-order-remove:hover:not(:disabled) { color: #a63838; background: #fff3f2; }
+.distribution-order-empty { display: grid; min-height: 132px; place-items: center; padding: 20px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 11px; line-height: 1.6; text-align: center; }
+.distribution-order-card-footer { padding: 12px 20px 16px; color: var(--text-muted); font-size: 10px; line-height: 1.5; }
+.distribution-order-feedback { display: flex; align-items: center; gap: 9px; padding: 11px 14px; border: 1px solid #c9e9dd; border-radius: 9px; background: #eff9f5; color: #14755f; font-size: 12px; line-height: 1.5; }
+.distribution-order-feedback.is-error { border-color: #f2d0d0; background: #fff6f5; color: #a63838; }
+.distribution-order-feedback > span { flex: 1; }
+.distribution-order-loading { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 180px; color: var(--text-muted); font-size: 12px; }
+.distribution-order-note, .distribution-order-updated { margin: 0; color: var(--text-muted); font-size: 10px; line-height: 1.5; }
+.distribution-order-updated { text-align: right; }
+@media(max-width: 900px) { .distribution-order-grid { grid-template-columns: minmax(0, 1fr); } }
+@media(max-width: 620px) { .distribution-order-page > .page-heading { align-items: stretch; flex-direction: column; gap: 12px; } .distribution-order-actions { width: 100%; } .distribution-order-actions .button { flex: 1; justify-content: center; } .distribution-order-guidance { grid-template-columns: minmax(0, 1fr); gap: 4px; } .distribution-order-card-header, .distribution-order-add { padding-inline: 14px; } .distribution-order-list { padding-inline: 14px; } .distribution-order-card-footer { padding-inline: 14px; } .distribution-order-controls { gap: 0; } }
+
+@media(max-width: 480px) {
+  .distribution-order-actions { align-items: stretch; flex-direction: column; }
+  .distribution-order-actions .button { width: 100%; }
+  .distribution-order-card-header { align-items: flex-start; flex-direction: column; }
+  .distribution-order-count { align-self: flex-start; }
+  .distribution-order-add > div { align-items: stretch; flex-direction: column; }
+  .distribution-order-add > div .button { width: 100%; }
+  .distribution-order-updated { text-align: left; }
+}

@@ -1,0 +1,47 @@
+.agent-bank-modal-layer { position: fixed; inset: 0; z-index: 1500; display: grid; place-items: center; padding: 20px; }
+.agent-bank-backdrop { position: absolute; inset: 0; border: 0; background: rgb(24 43 74 / 25%); backdrop-filter: blur(3px); }
+.agent-bank-modal { position: relative; width: min(620px, 100%); max-height: min(760px, calc(100dvh - 40px)); display: flex; flex-direction: column; overflow: hidden; padding: 24px 24px 0; background: #fff; border: 1px solid #dae5f6; border-radius: 22px; box-shadow: 0 24px 80px rgb(24 43 74 / 20%); color: #304668; }
+.agent-bank-modal-heading { display: flex; align-items: center; gap: 12px; }
+.agent-bank-heading-icon { display: grid; place-items: center; width: 44px; height: 44px; background: #edf4ff; color: #2463ff; border-radius: 13px; }
+.agent-bank-modal-heading > div { flex: 1; }
+.agent-bank-modal-heading strong { font-size: 18px; }
+.agent-bank-modal-heading p { margin: 5px 0 0; font-size: 13px; color: #7a8ba4; }
+.agent-bank-modal-heading > button { display: grid; place-items: center; width: 44px; height: 44px; border: 0; background: transparent; color: #7184a1; cursor: pointer; }
+.agent-bank-search { margin: 20px 0 12px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid #dfe7f3; border-radius: 12px; background: #f8faff; color: #7a8ba4; }
+.agent-bank-search input { min-width: 0; width: 100%; padding: 13px 0; border: 0; background: transparent; font: inherit; color: #304668; outline: none; }
+.agent-bank-search:focus-within { border-color: #83a5fc; }
+.agent-bank-search input:focus, .agent-bank-search input:focus-visible { outline: none; box-shadow: none; }
+.agent-bank-options { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 14px; }
+.agent-bank-options h4 { margin: 18px 8px 8px; color: #8493aa; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.agent-bank-option { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px; margin: 3px 0; min-height: 66px; border-radius: 12px; cursor: pointer; }
+.agent-bank-option:hover, .agent-bank-option.is-selected { background: #f1f6ff; }
+.agent-bank-all { background: #f7f9fd; }
+.agent-bank-option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.agent-bank-check { width: 22px; height: 22px; flex: 0 0 auto; display: grid; place-items: center; background: white; border: 1px solid #cdd9ed; border-radius: 7px; }
+.agent-bank-option input:checked + .agent-bank-check { color: white; background: #2463ff; border-color: #2463ff; }
+.agent-bank-option input:focus-visible + .agent-bank-check { outline: 2px solid #83a5fc; outline-offset: 3px; }
+.agent-bank-option > span:last-child { min-width: 0; flex: 1; }
+.agent-bank-option strong { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; font-weight: 650; }
+.agent-bank-option small { display: block; font-size: 12px; line-height: 19px; color: #8392aa; }
+.agent-bank-option > span > small { margin-top: 2px; }
+.agent-bank-option strong small { font-weight: 400; }
+.agent-bank-modal-footer { display: flex; align-items: center; gap: 10px; margin: 0 -24px; padding: 16px 24px; border-top: 1px solid #e5ebf4; }
+.agent-bank-modal-footer > span { margin-right: auto; font-size: 12px; color: #7a8ba4; }
+.agent-bank-modal-footer button { min-height: 44px; padding: 0 14px; border: 1px solid #dae4f4; border-radius: 10px; color: #587091; background: white; font: inherit; font-size: 12px; cursor: pointer; }
+.agent-bank-modal-footer button.is-primary { background: #2463ff; color: white; border-color: #2463ff; }
+.agent-bank-empty { padding: 24px; text-align: center; color: #7a8ba4; }
+.agent-bank-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.agent-bank-chips > span { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border-radius: 8px; color: #42618a; background: #f0f5ff; font-size: 12px; }
+.agent-bank-chips button { display: grid; place-items: center; padding: 2px; color: inherit; background: transparent; border: 0; cursor: pointer; }
+.agent-bank-chips small { align-self: center; color: #8392aa; }
+.agent-bank-notice { margin: 16px 0; padding: 12px 14px; border: 1px solid #dbe8fc; border-radius: 12px; background: #f6f9ff; color: #587091; font-size: 13px; line-height: 21px; }
+.agent-bank-notice p { margin: 4px 0; }
+.agent-bank-notice.is-warning { border-color: #eeddb9; background: #fffaf0; color: #886322; }
+@media (max-width: 600px) {
+  .agent-bank-modal-layer { padding: 10px; align-items: end; }
+  .agent-bank-modal { max-height: calc(100dvh - 24px); padding: 18px 16px 0; border-radius: 20px; }
+  .agent-bank-modal-footer { margin-inline: -16px; padding: 14px 16px max(14px, env(safe-area-inset-bottom)); flex-wrap: wrap; }
+  .agent-bank-modal-footer > span { width: 100%; }
+  .agent-bank-modal-footer .is-primary { margin-left: auto; }
+  .agent-bank-search input { font-size: 16px; }
+}

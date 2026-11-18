@@ -1,0 +1,47 @@
+.desktop-sidebar-toggle {
+  position: fixed;
+  z-index: 30;
+  top: var(--topbar-height, 72px);
+  left: var(--sidebar-width, 232px);
+  transform: translate(-50%, -50%);
+  display: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: #fff;
+  background: var(--accent);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgb(36 99 255 / 26%), 0 0 0 1px rgb(36 99 255 / 14%);
+  cursor: pointer;
+  transition: background .16s ease, box-shadow .16s ease;
+}
+
+.desktop-sidebar-toggle:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 5px 15px rgb(36 99 255 / 34%), 0 0 0 1px rgb(36 99 255 / 22%);
+}
+
+.desktop-sidebar-toggle:active {
+  box-shadow: 0 2px 5px rgb(36 99 255 / 24%), 0 0 0 1px rgb(36 99 255 / 18%);
+}
+
+.desktop-sidebar-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+body .app-frame.is-sidebar-collapsed > .desktop-sidebar {
+  display: none;
+}
+
+.app-frame.is-sidebar-collapsed > .desktop-sidebar-toggle {
+  left: 16px;
+}
+
+@media (min-width: 1200px) {
+  .desktop-sidebar-toggle {
+    display: grid;
+  }
+}

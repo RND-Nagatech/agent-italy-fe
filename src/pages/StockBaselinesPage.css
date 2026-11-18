@@ -1,0 +1,64 @@
+.baseline-page { display: grid; gap: 18px; }
+.baseline-page > .page-heading { margin-bottom: 0; }
+.baseline-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.baseline-notice { padding: 12px 16px; border: 1px solid #a6e1d4; color: #126653; background: #f0faf6; border-radius: 12px; }
+.baseline-notice.is-error, .baseline-error { color: #a32922; }
+.baseline-notice.is-error { background: #fff5f3; border-color: #f2c9c4; }
+.baseline-rule { display: flex; justify-content: space-between; gap: 28px; padding: 22px 24px; align-items: center; }
+.baseline-rule p { margin: 12px 0 6px; font-size: 16px; color: var(--text); }
+.baseline-rule span { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+.baseline-rule dl { display: flex; gap: 32px; flex-shrink: 0; }
+.baseline-rule dt { font-size: 12px; color: var(--text-muted); }
+.baseline-rule dd { font-size: 28px; margin: 5px 0 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+.baseline-directory { overflow: hidden; min-width: 0; }
+.baseline-directory > header { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 20px 24px; }
+.baseline-directory > header p { color: var(--text-muted); font-size: 12px; margin-top: 6px; }
+.baseline-toolbar { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 24px 18px; }
+.baseline-search { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 9px; padding-inline: 12px; border: 1px solid var(--border); border-radius: 10px; color: var(--text-muted); }
+.baseline-search input { border: 0; background: transparent; width: 100%; min-width: 0; padding-block: 10px; outline: none; }
+.baseline-search:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+.baseline-toolbar select, .baseline-form select, .baseline-form input:not([type=checkbox]) { min-height: 42px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: white; color: var(--text); }
+.baseline-table-scroll { max-width: 100%; overflow: auto; scrollbar-width: thin; scrollbar-color: #c3cddc transparent; }
+.baseline-page table, .baseline-modal table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+.baseline-page th, .baseline-page td, .baseline-modal th, .baseline-modal td { padding: 13px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.baseline-page td strong, .baseline-modal td strong { display: block; font-weight: 600; }
+.baseline-page td small, .baseline-modal td small { display: block; font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+.baseline-page .is-number, .baseline-modal .is-number { text-align: right; font-variant-numeric: tabular-nums; }
+.baseline-status { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 12px; background: #f0f3f7; color: #667085; }
+.baseline-status.is-active { background: #e8f7f1; color: #09654e; }
+.baseline-page .baseline-empty { padding: 45px 20px; color: var(--text-muted); text-align: center; }
+.baseline-directory > footer, .baseline-modal footer { display: flex; align-items: center; gap: 10px; padding: 16px 24px; justify-content: space-between; border-top: 1px solid var(--border); }
+.baseline-directory > footer > span { color: var(--text-muted); font-size: 12px; }
+.baseline-footnote { padding: 0 24px 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+.baseline-modal { position: fixed; inset: 0; margin: auto; width: min(860px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); padding: 0; border: 1px solid var(--border); border-radius: 18px; color: var(--text); box-shadow: 0 24px 80px #10182829; }
+.baseline-modal[open] { display: flex; flex-direction: column; }
+.baseline-modal::backdrop { background: #10182866; }
+.baseline-modal > header { padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.baseline-modal > form { min-height: 0; overflow: auto; }
+.baseline-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding: 24px; }
+.baseline-form > label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 600; min-width: 0; }
+.baseline-form > p { font-size: 13px; line-height: 1.6; grid-column: 1 / -1; }
+.baseline-form input:disabled, .baseline-form select:disabled { background: #f7f8fa; }
+.baseline-form .baseline-checkbox { flex-direction: row; align-items: center; gap: 9px; }
+.baseline-modal > .baseline-table-scroll { max-height: 55dvh; min-height: 0; }
+.baseline-modal-copy, .baseline-modal > .baseline-error { margin: 18px 24px; font-size: 13px; line-height: 1.6; }
+.baseline-modal footer { flex-shrink: 0; justify-content: flex-end; }
+.baseline-audits { min-height: 0; overflow: auto; padding: 20px 24px; }
+.baseline-audits section + section { margin-top: 24px; }
+.baseline-audits p { font-size: 12px; line-height: 1.5; color: var(--text-muted); margin-block: 5px 12px; }
+@media(max-width: 959px) { .baseline-rule { align-items: flex-start; flex-direction: column; gap: 18px; } .baseline-directory > header { align-items: flex-start; flex-direction: column; } }
+@media(max-width: 600px) { .baseline-form { grid-template-columns: 1fr; } .baseline-toolbar select { width: 100%; } .baseline-directory > footer { flex-wrap: wrap; } .baseline-page th, .baseline-page td { white-space: nowrap; } .baseline-modal input, .baseline-modal select { font-size: 16px; } }
+
+@media(max-width: 480px) {
+  .baseline-actions { width: 100%; flex-direction: column; align-items: stretch; }
+  .baseline-actions .button { width: 100%; justify-content: center; }
+  .baseline-directory > header, .baseline-toolbar { padding-inline: 16px; }
+  .baseline-search { min-width: 0; width: 100%; }
+  .baseline-toolbar { align-items: stretch; }
+  .baseline-toolbar select { width: 100%; }
+  .baseline-directory > footer { align-items: stretch; flex-direction: column; padding-inline: 16px; }
+  .baseline-directory > footer .baseline-actions { width: 100%; flex-direction: row; }
+  .baseline-directory > footer .baseline-actions .button { flex: 1; }
+  .baseline-modal footer { align-items: stretch; flex-direction: column; padding: 16px; }
+  .baseline-modal footer .button { width: 100%; justify-content: center; }
+}

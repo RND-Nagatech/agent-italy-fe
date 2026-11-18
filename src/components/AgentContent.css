@@ -1,0 +1,98 @@
+/* Compact report typography, scoped to conversation content. */
+body .agent-page .agent-message-content > p,
+body .agent-page .agent-response-text {
+  font-size: 13px;
+  line-height: 21px;
+}
+
+body .agent-page .agent-response-text.is-muted {
+  font-size: 11px;
+  line-height: 18px;
+}
+
+body .agent-page .agent-response-heading {
+  font-size: 17px;
+  line-height: 24px;
+}
+
+body .agent-page .agent-response-metric {
+  min-height: 92px;
+  padding: 15px 16px;
+  gap: 6px;
+}
+
+body .agent-page .agent-response-metric-label.card-title {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+body .agent-page .agent-response-metric-label .card-title-icon > svg {
+  width: 17px;
+  height: 17px;
+}
+
+body .agent-page .agent-response-metric-value {
+  font-size: clamp(22px, 1.7vw, 28px);
+  line-height: 1.1;
+}
+
+body .agent-page .agent-response-metric-value-number {
+  font-size: clamp(16px, 10cqi, 28px);
+}
+
+body .agent-page .agent-response-metric-value-unit {
+  font-size: max(10px, .38em);
+}
+
+body .agent-page .agent-response-metric-note {
+  font-size: 11px;
+  line-height: 17px;
+}
+
+body .agent-page .agent-response-card-title.card-title {
+  min-height: 48px;
+  padding-block: 10px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+body .agent-page .agent-message .agent-response-table th {
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+body .agent-page .agent-message .agent-response-table td {
+  padding: 8px 12px;
+  font-size: 11px;
+  line-height: 17px;
+}
+
+body .agent-page .agent-message .agent-response-table:is(.is-bank-reconciliation, .is-bank-transactions) td {
+  padding-block: 10px;
+}
+
+body .agent-page .agent-response-bank-status {
+  padding: 4px 7px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+body .agent-page .agent-response-list-card li,
+body .agent-page .agent-response-callout p,
+body .agent-page .agent-comparison-delta,
+body .agent-page .agent-analysis-columns ul {
+  font-size: 12px;
+  line-height: 20px;
+}
+
+body .agent-page .agent-response-callout strong,
+body .agent-page .agent-analysis-columns h4,
+body .agent-page .agent-comparison-values span {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+body .agent-page .agent-comparison-values strong {
+  font-size: clamp(20px, 2vw, 28px);
+}
