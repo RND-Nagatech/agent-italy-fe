@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { AgentSourceSummary } from '../lib/types'
 import type { BankScopeResolved } from '../lib/banking'
+import { mentionsAgentSource } from '../lib/agent-report-scope'
 import { BankAccountPicker } from './BankAccountPicker'
 
 export type AgentScopeSelection = {
@@ -128,7 +129,10 @@ export function AgentScopeClarifier({ prompt, sources, needsDate, needsSource, b
   const allSourceIds = useMemo(() => sources.map(sourceKey), [sources])
   const [sourcePickerOpen, setSourcePickerOpen] = useState(false)
   const [sourceSearch, setSourceSearch] = useState('')
-  const initialBranches = banking?.selection.branchIds.length ? banking.selection.branchIds : allSourceIds
+  const allSourcesRequested = /\b(?:semua|seluruh)\s+(?:toko|cabang|sumber)\b/i.test(prompt)
+  const mentionedSourceIds = sources.filter(source => mentionsAgentSource(prompt, source)).map(sourceKey)
+  const initialBranches = banking?.selection.branchIds.length ? banking.selection.branchIds
+    : !allSourcesRequested && mentionedSourceIds.length ? mentionedSourceIds : allSourceIds
   const [allSourcesSelected, setAllSourcesSelected] = useState(initialBranches.length === allSourceIds.length)
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>(initialBranches)
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>(banking?.selection.accountIds ?? [])

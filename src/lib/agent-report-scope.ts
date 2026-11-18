@@ -27,8 +27,9 @@ export function resolveAgentReportScope(value: string, sources: readonly ReportS
   const hasDate = /(hari ini|kemarin|tadi|sekarang|bulan ini|bulan lalu|minggu ini|minggu lalu|tahun ini|tahun lalu|tanggal|tgl|s\/d|sd|hingga|sampai|januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)/i.test(value)
     || /\b20\d{2}[-/]\d{1,2}[-/]\d{1,2}\b/.test(value)
   const allSources = /\b(?:semua|seluruh)\s+(?:toko|cabang|sumber)\b/i.test(normalizeScopeText(value))
+  const salesReport = /\bpenjualan\b|\bmarketplace\b|\bharga\s+online\b/i.test(value)
   return {
     needsDate: !hasDate,
-    needsSource: !allSources && !sources.some(source => mentionsAgentSource(value, source)),
+    needsSource: !salesReport && !allSources && !sources.some(source => mentionsAgentSource(value, source)),
   }
 }
