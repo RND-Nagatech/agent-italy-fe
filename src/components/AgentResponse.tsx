@@ -6,6 +6,7 @@ import type { AgentResponseBlock } from '../lib/types'
 import { buybackAuditExplanation } from '../lib/buyback-audit-presentation'
 import { marketplaceStatusCell, marketplaceStatusLabel } from '../lib/price-audit-status'
 import { marketplaceColumnLabel } from '../lib/marketplace-report-presentation'
+import { isSalesAuthorizationTable } from '../lib/sales-authorization-report'
 import './AgentResponse.css'
 import { CardHeading } from './CardHeading'
 
@@ -563,7 +564,8 @@ function AgentTable({ block }: { block: Extract<AgentResponseBlock, {type: 'tabl
   const isBankTransactionsTable = displayColumns.some(column => /rekening\s+toko/i.test(column))
     && displayColumns.some(column => /jenis\s+transaksi/i.test(column))
     && displayColumns.some(column => /uang\s+masuk/i.test(column))
-  const canExport = isBankReconciliationTable || isPriceAuditTable || isMarketplaceSalesTable
+  const isSalesAuthorization = isSalesAuthorizationTable(displayColumns)
+  const canExport = isBankReconciliationTable || isPriceAuditTable || isMarketplaceSalesTable || isSalesAuthorization
   const matchStatusIndex = displayColumns.findIndex(column => /status\s+pemeriksaan/i.test(column))
   const currencyColumns = displayColumns.map(currencyColumn)
   const weightColumns = displayColumns.map(weightColumn)
@@ -586,6 +588,11 @@ function AgentTable({ block }: { block: Extract<AgentResponseBlock, {type: 'tabl
     setExporting(true)
     setExportError(null)
     try {
+      if (isSalesAuthorization) {
+        const { exportSalesAuthorizationExcel } = await import('../lib/report-excel')
+        await exportSalesAuthorizationExcel({ title: block.title, columns: displayColumns, rows: orderedRows })
+        return
+      }
       if (isMarketplaceSalesTable) {
         const { exportMarketplaceSalesExcel } = await import('../lib/report-excel')
         await exportMarketplaceSalesExcel({ title: block.title, columns: displayColumns, rows: orderedRows })

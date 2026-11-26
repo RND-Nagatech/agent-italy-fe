@@ -1,8 +1,37 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { dailyBuybackWindows, dailyPriceWindows, isPriceAuditQuery, shouldCheckPriceAttachments, resolveChatPriceScope, readPriceAttachment, type PriceReadStatus, type PriceReference } from '../src/lib/price-audit.ts'
-import { exportPriceAuditExcel, exportMarketplaceSalesExcel } from '../src/lib/report-excel.ts'
+import { exportPriceAuditExcel, exportMarketplaceSalesExcel, exportSalesAuthorizationExcel } from '../src/lib/report-excel.ts'
+import { isSalesAuthorizationTable } from '../src/lib/sales-authorization-report.ts'
 import ExcelJS from 'exceljs'
+
+test('sales authorization reports export all ordered rows with notes, barcode text, numeric weights and the shared Excel style', async () => {
+  const columns = ['Tanggal', 'No. Faktur', 'Barcode', 'Keterangan', 'Deskripsi', 'Berat Awal (gram)', 'Berat (gram)', 'Input oleh']
+  assert.equal(isSalesAuthorizationTable(columns),true)
+  assert.equal(isSalesAuthorizationTable(['Tanggal','No. Faktur','Barcode','Nama Barang','Total Penjualan (IDR)']),false)
+  assert.equal(isSalesAuthorizationTable(['Marketplace','No. Faktur','Otorisasi di Bawah Modal','Keterangan Otorisasi']),false)
+  const originalDocument = globalThis.document, originalWindow = globalThis.window, originalCreate = URL.createObjectURL
+  let exported: Blob | undefined, filename = ''
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:()=>({href:'',set download(value:string){filename=value},click(){},remove(){}}),body:{appendChild(){}}}})
+  Object.defineProperty(globalThis,'window',{configurable:true,value:{setTimeout(){}}})
+  URL.createObjectURL = blob => { exported = blob as Blob; return 'blob:sales-authorization' }
+  try {
+    const rows = Array.from({length:24},(_,index)=>['2026-11-25',`FJ-${23-index}`,'00012345',index ? 'Keterangan tidak diisi' : 'Disetujui harga marketplace\nSesuai persetujuan supervisor','PENJUALAN DI BAWAH MODAL',index ? null : 1.75,index ? 0 : 1.71,'SUPERVISOR'])
+    await exportSalesAuthorizationExcel({title:'Data ITALY PUSAT',columns,rows})
+    assert.ok(exported); assert.match(filename,/^otorisasi-penjualan-data-italy-pusat-\d{4}-\d{2}-\d{2}\.xlsx$/)
+    const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(Buffer.from(await exported.arrayBuffer()))
+    const sheet = workbook.getWorksheet('Otorisasi Penjualan')!
+    assert.equal(workbook.subject,'Laporan otorisasi penjualan'); assert.equal(sheet.getCell('A1').value,'Otorisasi Penjualan — Data ITALY PUSAT')
+    assert.deepEqual(sheet.getRow(2).values.slice(1),columns); assert.equal(sheet.rowCount,26); assert.equal(sheet.autoFilter,'A2:H26'); assert.equal(sheet.views[0].ySplit,2)
+    assert.equal(sheet.getCell('B3').value,'FJ-23'); assert.equal(sheet.getCell('B26').value,'FJ-0'); assert.equal(sheet.getCell('C3').value,'00012345')
+    assert.equal(sheet.getCell('D3').value,rows[0][3]); assert.equal(sheet.getCell('D3').alignment.wrapText,true); assert.equal(sheet.getCell('E3').value,'PENJUALAN DI BAWAH MODAL')
+    assert.equal(sheet.getCell('F3').value,1.75); assert.equal(sheet.getCell('G3').value,1.71); assert.equal(sheet.getCell('F4').value,'—'); assert.equal(sheet.getCell('G4').value,0)
+    assert.equal((sheet.getCell('A1').fill as {fgColor:{argb:string}}).fgColor.argb,'FF2458C8'); assert.equal((sheet.getCell('A2').fill as {fgColor:{argb:string}}).fgColor.argb,'FFEAF1FB')
+    assert.equal((sheet.getCell('A4').fill as {fgColor:{argb:string}}).fgColor.argb,'FFF8FAFD')
+  } finally {
+    Object.defineProperty(globalThis,'document',{configurable:true,value:originalDocument}); Object.defineProperty(globalThis,'window',{configurable:true,value:originalWindow}); URL.createObjectURL=originalCreate
+  }
+})
 
 test('opens the price form for audit requests, leaving stock and banking requests alone', () => {
   for (const text of ['saya mau cek transaksi penjualan dan buyback dengan data saya', 'cek harga penjualan dengan file acuan', 'cek harga marketplace sesuai file', 'audit harga online dengan acuan', 'audit harga emas', 'cek buyback', 'tolong cek transaksi buyback dengan file ini', 'cek buy back dengan data saya']) assert.equal(isPriceAuditQuery(text), true, text)
@@ -48,11 +77,11 @@ test('buyback Excel preserves decrypted identity, conditions, range statuses, mi
   Object.defineProperty(globalThis, 'window', { configurable: true, value: { setTimeout() {} } })
   URL.createObjectURL = blob => { exported = blob as Blob; return 'blob:buyback' }
   try {
-    const columns = ['Kode Intern', 'Kode Acuan', 'Kondisi', 'Berat (gram)', 'Harga Buyback (IDR)', 'Harga Nota (IDR)', 'Harga Rata per gram (IDR)', 'Batas Bawah Acuan per gram (IDR)', 'Batas Atas Acuan per gram (IDR)', 'Status Pemeriksaan', 'Keterangan Pemeriksaan']
+    const columns = ['Kode Intern', 'Kode Acuan', 'Kondisi', 'Berat (gram)', 'Harga Buyback (IDR)', 'Harga Nota (IDR)', 'Harga Rata per gram (IDR)', 'Batas Bawah Acuan per gram (IDR)', 'Batas Atas Acuan per gram (IDR)', 'Status Pemeriksaan', 'Keterangan Pemeriksaan', 'Otorisasi di Atas Nota', 'Deskripsi Otorisasi', 'Keterangan Otorisasi']
     const rows = [
-      ['D3 16', 'D3', 'CUCI 16K / 17K RP', 1.71, 3490123.45, 3520456.75, 1800000, 1757000, 1808000, 'Masih dalam batas range acuan', 'Termasuk kedua batas.'],
-      ['D3 17', 'D3', 'CUCI 16K / 17K RP', 2, 3640000, 0, 1820000, 1757000, 1808000, 'Di luar range acuan', 'Melebihi batas atas Rp12.000.'],
-      ['-', '-', 'CUCI 16K / 17K RP', null, null, null, 1480000, null, null, 'Perlu diperhatikan', 'Pukul 11:06:18 WIB masuk Batch 1. Barang tidak ditemukan di master MongoDB maupun MariaDB; kode intern belum diketahui. Acuan belum dapat ditentukan. Harga rata transaksi Rp1.480.000.'],
+      ['D3 16', 'D3', 'CUCI 16K / 17K RP', 1.71, 3490123.45, 3520456.75, 1800000, 1757000, 1808000, 'Masih dalam batas range acuan', 'Termasuk kedua batas.', 'Tidak ditemukan', 'Tidak ditemukan', 'Tidak ditemukan otorisasi pembelian di atas nota untuk faktur ini.'],
+      ['D3 17', 'D3', 'CUCI 16K / 17K RP', 2, 3640000, 0, 1820000, 1757000, 1808000, 'Di luar range acuan', 'Melebihi batas atas Rp12.000.', 'Ada otorisasi', 'PEMBELIAN DI ATAS NOTA', 'FB-2: Disetujui nominal pembelian\nPersetujuan tambahan'],
+      ['-', '-', 'CUCI 16K / 17K RP', null, null, null, 1480000, null, null, 'Perlu diperhatikan', 'Pukul 11:06:18 WIB masuk Batch 1. Barang tidak ditemukan di master MongoDB maupun MariaDB; kode intern belum diketahui. Acuan belum dapat ditentukan. Harga rata transaksi Rp1.480.000.', 'Belum dapat diperiksa', 'Belum dapat diperiksa', 'Data otorisasi belum dapat dibaca lengkap; periksa kembali.'],
     ]
     await exportPriceAuditExcel({ title: 'Audit harga buyback perhiasan', columns, rows })
     assert.ok(exported)
@@ -60,7 +89,7 @@ test('buyback Excel preserves decrypted identity, conditions, range statuses, mi
     await workbook.xlsx.load(Buffer.from(await exported.arrayBuffer()))
     const sheet = workbook.getWorksheet('Buyback')!
     assert.deepEqual(sheet.getRow(2).values.slice(1), columns)
-    assert.equal(sheet.rowCount, 5); assert.equal(sheet.autoFilter, 'A2:K5'); assert.equal(sheet.views[0].state, 'frozen')
+    assert.equal(sheet.rowCount, 5); assert.equal(sheet.autoFilter, 'A2:N5'); assert.equal(sheet.views[0].state, 'frozen')
     assert.equal(sheet.getCell('A3').value, 'D3 16'); assert.equal(sheet.getCell('C3').value, 'CUCI 16K / 17K RP')
     assert.equal(sheet.getCell('D3').value, 1.71); assert.equal(sheet.getCell('E3').value, 3490123.45); assert.equal(sheet.getCell('F3').value, 3520456.75)
     assert.equal(sheet.getCell('G3').value, 1800000); assert.equal(sheet.getCell('H3').value, 1757000)
@@ -72,6 +101,10 @@ test('buyback Excel preserves decrypted identity, conditions, range statuses, mi
     assert.match(String(sheet.getCell('K5').value), /1\.480\.000/)
     assert.match(String(sheet.getCell('K5').value), /Pukul 11:06:18 WIB masuk Batch 1\. Kode intern barang belum diketahui\./)
     assert.doesNotMatch(String(sheet.getCell('K5').value), /mongo\s*db|maria\s*db|mysql|rds/i)
+    assert.equal(sheet.getCell('L4').value,'Ada otorisasi'); assert.equal(sheet.getCell('M4').value,'PEMBELIAN DI ATAS NOTA')
+    assert.equal(sheet.getCell('N4').value,'FB-2: Disetujui nominal pembelian\nPersetujuan tambahan'); assert.equal(sheet.getCell('N4').alignment.wrapText,true)
+    assert.equal(sheet.getCell('J4').value,'Di luar range acuan','authorization does not replace the price result')
+    assert.equal(sheet.getCell('L3').value,'Tidak ditemukan'); assert.equal(sheet.getCell('L5').value,'Belum dapat diperiksa')
   } finally {
     Object.defineProperty(globalThis, 'document', { configurable: true, value: originalDocument })
     Object.defineProperty(globalThis, 'window', { configurable: true, value: originalWindow })

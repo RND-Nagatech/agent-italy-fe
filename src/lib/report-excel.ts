@@ -27,6 +27,11 @@ export function exportMarketplaceSalesExcel(table: ExcelTable) {
   return exportTableExcel({ ...table, title, columns, rows }, 'Penjualan Online', audit ? 'Pemeriksaan harga penjualan marketplace' : 'Laporan penjualan online marketplace')
 }
 
+export function exportSalesAuthorizationExcel(table: ExcelTable) {
+  const title = table.title ? `Otorisasi Penjualan — ${table.title}` : 'Otorisasi Penjualan'
+  return exportTableExcel({ ...table, title }, 'Otorisasi Penjualan', 'Laporan otorisasi penjualan')
+}
+
 /** Workbook uses the same typography, colors, frozen headers and filter as reconciliation. */
 async function exportTableExcel(table: ExcelTable, name: string, subject: string) {
   const { default: ExcelJS } = await import('exceljs')
