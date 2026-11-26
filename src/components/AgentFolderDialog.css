@@ -1,0 +1,57 @@
+.agent-folder-dialog { position: fixed; inset: 0; margin: auto; width: min(720px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 0; color: #18283d; background: #fff; border: 1px solid #dce5f0; border-radius: 22px; overflow: hidden; box-shadow: 0 28px 90px #10223c38; }
+.agent-folder-dialog[open] { display: flex; flex-direction: column; }
+.agent-folder-dialog::backdrop { background: #172a426b; backdrop-filter: blur(3px); }
+.agent-folder-dialog header, .agent-folder-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 24px; flex-shrink: 0; }
+.agent-folder-dialog header { border-bottom: 1px solid #e6edf5; }
+.agent-folder-heading { display: flex; align-items: center; gap: 13px; }
+.agent-folder-heading-icon { display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0; border-radius: 14px; color: #2463df; background: #edf3ff; }
+.agent-folder-dialog h2 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; }
+.agent-folder-dialog header p { margin: 4px 0 0; color: #68788d; font-size: 13px; line-height: 1.5; }
+.agent-folder-dialog .icon-button { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+.agent-folder-body { padding: 22px 24px; overflow-y: auto; min-height: 0; }
+.agent-folder-dropzone { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 16px; text-align: center; border: 1.5px dashed #b7c9e2; border-radius: 16px; background: #f5f8fd; color: #3b6da9; transition: background .15s, border-color .15s; }
+.agent-folder-dropzone > * { pointer-events: none; }
+.agent-folder-dropzone.is-dragging { border-color: #2463ff; background: #eaf1ff; }
+.agent-folder-dropzone strong { color: #253c5b; font-size: 17px; }
+.agent-folder-dropzone span { color: #60738b; font-size: 13px; line-height: 1.6; }
+.agent-folder-dropzone small { color: #72839a; font-size: 11px; line-height: 1.6; }
+.agent-folder-file-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; color: #68788d; font-size: 12px; }
+.agent-folder-dialog .button { min-height: 44px; }
+.agent-folder-selection { margin-top: 22px; border: 1px solid #e0e8f2; border-radius: 14px; overflow: hidden; }
+.agent-folder-selection-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: #f8faff; }
+.agent-folder-selection-heading strong { display: block; font-size: 13px; overflow-wrap: anywhere; }
+.agent-folder-selection-heading small { display: block; margin-top: 3px; color: #748198; font-size: 11px; }
+.agent-folder-selection-heading > label { display: flex; align-items: center; gap: 7px; flex-shrink: 0; min-height: 44px; color: #4d6482; font-size: 12px; cursor: pointer; }
+.agent-folder-selection input { accent-color: #2463df; width: 17px; height: 17px; flex-shrink: 0; }
+.agent-folder-selection ul { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
+.agent-folder-selection li + li { border-top: 1px solid #edf1f7; }
+.agent-folder-selection li > label { display: flex; align-items: center; gap: 11px; padding: 12px 16px; min-height: 44px; cursor: pointer; }
+.agent-folder-selection li > label:hover { background: #f8faff; }
+.agent-folder-file-icon { display: grid; place-items: center; width: 34px; height: 38px; flex-shrink: 0; color: #5077b1; background: #eff4fc; border-radius: 8px; }
+.agent-folder-file-copy { flex: 1; min-width: 0; }
+.agent-folder-file-copy strong { display: block; color: #334862; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.agent-folder-file-copy small { display: block; margin-top: 2px; color: #8590a2; font-size: 10px; overflow-wrap: anywhere; }
+.agent-folder-file-size { flex-shrink: 0; color: #738197; font-size: 11px; }
+.agent-folder-note, .agent-folder-error { margin: 14px 0 0; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.agent-folder-note { color: #6f7e91; }
+.agent-folder-error { padding: 10px 12px; color: #9d462d; background: #fff5eb; border: 1px solid #f5dec7; border-radius: 9px; }
+.agent-folder-dialog footer { border-top: 1px solid #e6edf5; background: #f9fbfe; }
+.agent-folder-dialog footer > span { color: #415873; font-size: 13px; font-weight: 600; }
+.agent-folder-dialog footer small { display: block; max-width: 240px; margin-top: 5px; color: #8490a0; font-size: 10px; font-weight: 400; line-height: 1.5; }
+.agent-folder-dialog footer > div { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.agent-folder-dialog button:focus-visible, .agent-folder-dialog input:focus-visible { outline: 2px solid #2463ff; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .agent-folder-dialog { width: calc(100vw - 20px); max-height: calc(100dvh - 24px); border-radius: 17px; }
+  .agent-folder-dialog header, .agent-folder-dialog footer { padding: 16px; }
+  .agent-folder-body { padding: 16px; }
+  .agent-folder-heading { gap: 10px; }
+  .agent-folder-heading-icon { width: 40px; height: 40px; }
+  .agent-folder-dialog h2 { font-size: 17px; }
+  .agent-folder-dialog header p { font-size: 11px; }
+  .agent-folder-dropzone { padding: 26px 12px; }
+  .agent-folder-file-option > span { max-width: 150px; line-height: 1.6; }
+  .agent-folder-dialog footer { align-items: stretch; flex-direction: column; gap: 12px; }
+  .agent-folder-dialog footer small { max-width: none; }
+  .agent-folder-dialog footer > div { justify-content: flex-end; }
+  .agent-folder-selection-heading, .agent-folder-selection li > label { padding-inline: 12px; }
+}

@@ -1,0 +1,41 @@
+.price-audit-dialog { width: min(980px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); margin: auto; padding: 0; border: 1px solid #dbe5f3; border-radius: 22px; color: #344a68; background: #fff; box-shadow: 0 24px 80px #183a682b; }
+.price-audit-dialog h2 { font-size: 20px; font-weight: 700; line-height: 1.4; }
+.price-audit-dialog::backdrop { background: #12264173; backdrop-filter: blur(4px); }
+.price-audit-dialog > header, .price-audit-dialog > footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px 26px; }
+.price-audit-dialog > header { border-bottom: 1px solid #e5edf8; }
+.price-audit-dialog header p { margin: 8px 0 0; color: #70849e; font-size: 13px; }
+.price-audit-body { padding: 20px 26px; max-height: calc(100dvh - 255px); overflow-y: auto; }
+.price-audit-note { font-size: 12px; line-height: 1.7; color: #70849e; }
+.price-audit-window { margin: 16px 0; padding: 18px; border: 1px solid #dce7f5; border-radius: 16px; background: #f9fbff; }
+.price-audit-window-heading, .price-audit-window-heading strong, .price-audit-file-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.price-audit-window-heading strong { justify-content: flex-start; }
+.price-audit-fields { display: grid; grid-template-columns: 1.2fr 1fr 1.4fr; gap: 14px; margin: 15px 0; }
+.price-audit-dialog label { font-size: 12px; font-weight: 600; }
+.price-audit-dialog input:not([type=checkbox]):not([type=file]), .price-audit-dialog select { display: block; width: 100%; min-height: 42px; box-sizing: border-box; margin-top: 7px; padding: 9px 11px; border: 1px solid #d4e0f1; border-radius: 9px; background: #fff; color: #344a68; font: inherit; }
+.price-audit-dialog input:focus-visible, .price-audit-dialog select:focus-visible, .price-audit-dialog summary:focus-visible { outline: 2px solid #2d69ff; outline-offset: 2px; }
+.price-audit-end-toggle { display: flex; align-items: center; gap: 6px; margin-top: 7px; font-weight: 400 !important; }
+.price-audit-upload { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px; border: 1px dashed #91b2e4; border-radius: 11px; background: #f0f6ff; color: #2458c8; cursor: pointer; }
+.price-audit-upload input { max-width: 220px; font-size: 11px; }
+.price-audit-upload:focus-within { outline: 2px solid #2d69ff; }
+.price-audit-upload.is-disabled { opacity: .65; }
+.price-audit-file { padding: 12px; margin-top: 10px; background: white; border: 1px solid #e0e8f3; border-radius: 10px; }
+.price-audit-file-heading span { min-width: 0; overflow-wrap: anywhere; }
+.price-audit-file strong { font-size: 12px; }
+.price-audit-file small { display: block; margin-top: 5px; font-size: 11px; color: #70849e; }
+.price-audit-file details { margin-top: 11px; font-size: 12px; }
+.price-audit-file summary { cursor: pointer; color: #2458c8; }
+.price-audit-preview { max-height: 280px; overflow: auto; margin-top: 10px; }
+.price-audit-preview table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.price-audit-preview th, .price-audit-preview td { padding: 8px; text-align: left; border-bottom: 1px solid #e5edf8; white-space: nowrap; }
+.price-audit-preview th { background: #eaf1fb; position: sticky; top: 0; }
+.price-audit-preview input { min-width: 86px; }
+.price-audit-options { max-width: 300px; margin: 16px 0; }
+.price-audit-date { display: block; min-height: 42px; box-sizing: border-box; margin-top: 7px; padding: 11px; font-size: 14px; color: #2458c8; }
+.price-audit-confirm { display: flex; align-items: flex-start; gap: 9px; line-height: 1.6; font-weight: 400 !important; }
+.price-audit-dialog > footer { border-top: 1px solid #e5edf8; background: #f9fbff; }
+.price-audit-dialog footer span { max-width: 430px; font-size: 11px; line-height: 1.6; color: #70849e; }
+.price-audit-dialog footer button { flex-shrink: 0; }
+.price-audit-error { color: #bc3535; font-size: 12px; line-height: 1.6; }
+.price-audit-warning { color: #986218; font-size: 11px; line-height: 1.6; }
+.price-audit-progress { display: flex; align-items: center; gap: 8px; color: #2458c8; font-size: 12px; }
+@media (max-width: 640px) { .price-audit-dialog > header, .price-audit-dialog > footer, .price-audit-body { padding: 16px; } .price-audit-fields, .price-audit-options { grid-template-columns: 1fr; } .price-audit-dialog > footer, .price-audit-upload { flex-direction: column; align-items: stretch; } .price-audit-body { max-height: calc(100dvh - 285px); } }

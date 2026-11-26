@@ -62,6 +62,43 @@ body .agent-page .agent-message .agent-response-table th {
   line-height: 16px;
 }
 
+/* All report tables keep the header as one centered, stable row. */
+body .agent-page .agent-message .agent-response-table {
+  min-width: 100%;
+}
+
+body .agent-page .agent-message .agent-response-table th,
+body .agent-page .agent-message .agent-response-table th.is-number {
+  height: 60px;
+  padding: 14px 18px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+body .agent-page .agent-message .agent-response-table th:first-child {
+  border-top-left-radius: 10px;
+}
+
+body .agent-page .agent-message .agent-response-table th:last-child {
+  border-top-right-radius: 10px;
+}
+
+body .agent-page .agent-message .agent-response-table th .table-sort-button,
+body .agent-page .agent-message .agent-response-table th.is-number .table-sort-button {
+  width: auto;
+  min-width: 0;
+  margin-inline: auto;
+  justify-content: center;
+  gap: 9px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+body .agent-page .agent-message .agent-response-table th .table-sort-button span {
+  white-space: nowrap;
+}
+
 body .agent-page .agent-message .agent-response-table td {
   padding: 8px 12px;
   font-size: 11px;
@@ -95,4 +132,55 @@ body .agent-page .agent-comparison-values span {
 
 body .agent-page .agent-comparison-values strong {
   font-size: clamp(20px, 2vw, 28px);
+}
+.agent-message-content .agent-price-read-error { max-width: 100%; margin: 12px 0 0; flex-wrap: wrap; font-size: 12px; line-height: 1.6; }
+.agent-message-content .agent-price-read-error .text-link { font-size: 12px; min-height: 36px; }
+
+body .agent-page .agent-message .is-buyback-audit .agent-response-table td {
+  vertical-align: top;
+}
+
+body .agent-page .agent-message .is-buyback-audit .agent-response-table .is-reference-range {
+  min-width: 250px;
+  max-width: 300px;
+  white-space: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+body .agent-page .agent-message .is-buyback-audit .agent-response-table td.is-reference-range {
+  background: #f2f6fd;
+}
+
+body .agent-page .agent-message .is-buyback-audit .agent-response-table .is-audit-explanation {
+  min-width: 300px;
+  max-width: 440px;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/* Keep file, folder and send controls clear of the message on narrow screens. */
+body .agent-page .agent-composer {
+  padding-right: 160px;
+}
+body .agent-page .agent-composer .agent-attach-button,
+body .agent-page .agent-composer .agent-send-button {
+  top: 8px;
+  width: 44px;
+  height: 44px;
+}
+body .agent-page .agent-composer .agent-send-button { right: 8px; }
+body .agent-page .agent-composer .agent-attach-button { right: 56px; }
+body .agent-page .agent-composer .agent-folder-button { right: 104px; }
+body .agent-page .agent-composer > p {
+  right: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+body .agent-page .agent-attachment-notice {
+  margin: 0 0 7px;
+  color: #526177;
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
 }

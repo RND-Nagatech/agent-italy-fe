@@ -3,6 +3,9 @@ import { motion, useReducedMotion } from 'motion/react'
 import { Activity, AlertTriangle, BarChart3, CheckCircle2, Download, Info, LoaderCircle, PieChart, Sparkles, Table2 } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import type { AgentResponseBlock } from '../lib/types'
+import { buybackAuditExplanation } from '../lib/buyback-audit-presentation'
+import { marketplaceStatusCell, marketplaceStatusLabel } from '../lib/price-audit-status'
+import { marketplaceColumnLabel } from '../lib/marketplace-report-presentation'
 import './AgentResponse.css'
 import { CardHeading } from './CardHeading'
 
@@ -16,7 +19,10 @@ const numberFormat = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }
 
 export function AgentResponse({ blocks, fallbackText }: Props) {
   const reduceMotion = useReducedMotion() ?? false
-  const displayBlocks = (blocks?.length ? blocks : parseFallback(fallbackText))
+  const sourceBlocks = blocks?.length ? blocks : parseFallback(fallbackText)
+  const hasMarketplaceAudit = sourceBlocks.some(block => block.type === 'table' && block.title === 'Audit harga penjualan marketplace perhiasan')
+  const displayBlocks = sourceBlocks
+    .map(block => hasMarketplaceAudit && block.type === 'metric' && block.unit === 'penjualan' ? { ...block, label: marketplaceStatusLabel(block.label) } : block)
     .filter((block) => !(block.type === 'metric' && /^total\s+baris$/i.test(block.label.trim())))
 
   return <div className="agent-response-blocks">
@@ -459,7 +465,7 @@ function barcodeCell(value: unknown): number | null {
   return Number.isFinite(barcode) ? barcode : null
 }
 function currencyColumn(column: string): boolean {
-  return !/gram|%|persen/i.test(column) && /\b(?:rp|idr|rupiah|omzet|pendapatan)\b|nilai\s+(?:penjualan|jual|transaksi)|harga|biaya/i.test(column)
+  return !/^range\b|%|persen/i.test(column) && /\b(?:rp|idr|rupiah|omzet|pendapatan)\b|nilai\s+(?:penjualan|jual|transaksi)|harga|biaya/i.test(column)
 }
 function pcsColumn(column: string): boolean {
   if (/\b(?:gram|berat|weight|idr|rupiah|omzet|pendapatan|harga|biaya)\b|%|persen/i.test(column)) return false
@@ -482,7 +488,7 @@ function currencyCell(value: unknown): number | null {
   return Number.isFinite(amount) ? amount : null
 }
 function weightColumn(column: string): boolean {
-  return /\b(?:gram|berat|weight)\b/i.test(column) && !/%|persen/i.test(column)
+  return /\b(?:gram|berat|weight)\b/i.test(column) && !/harga|idr|rupiah|biaya|ongkos|selisih|^range\b|%|persen/i.test(column)
 }
 function weightCell(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null
@@ -497,9 +503,12 @@ function weightCell(value: unknown): number | null {
 const tableWeightFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 })
 const tablePcsFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
 const tableCurrencyFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 2 })
+const tableRateFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 6 })
 function tableColumnClass(column: string) {
   if (/marketplace/i.test(column)) return 'is-marketplace-column'
-  if (/rekening\s+toko|kode\s+bank|status\s+pemeriksaan/i.test(column)) return 'is-bank-column'
+  if (/rekening\s+toko|kode\s+bank|(?:status|hasil)\s+pemeriksaan/i.test(column)) return 'is-bank-column'
+  if (/^range\b/i.test(column)) return 'is-reference-range'
+  if (/^keterangan\s+pemeriksaan/i.test(column)) return 'is-audit-explanation'
   return ''
 }
 function AgentColumn({ column, index, sorting, numeric }: { column: string; index: number; sorting: ReturnType<typeof useTableSort>; numeric: boolean }) {
@@ -535,18 +544,26 @@ function AgentTable({ block }: { block: Extract<AgentResponseBlock, {type: 'tabl
     return () => window.cancelAnimationFrame(frame)
   }, [visibleRows])
   const isMarketplaceSalesTable = /marketplace|penjualan\s+online|harga\s+online/i.test([block.title ?? '', ...block.columns].join(' '))
+  const isMarketplaceAudit = block.title === 'Audit harga penjualan marketplace perhiasan'
+  const isBuybackAudit = block.title === 'Audit harga buyback perhiasan'
   const displayColumnIndexes = block.columns
     .map((column, index) => ({ column, index }))
-    .filter(({ column }) => !(isMarketplaceSalesTable && /lebih\s+bayar/i.test(column)))
+    .filter(({ column }) => !(isBuybackAudit && /^sumber\s+barang$/i.test(column.trim())))
     .map(({ index }) => index)
-  const displayColumns = displayColumnIndexes.map(index => block.columns[index])
-  const displayRows = block.rows.map(row => displayColumnIndexes.map(index => row[index] ?? null))
+  const displayColumns = displayColumnIndexes.map(index => isMarketplaceSalesTable ? marketplaceColumnLabel(block.columns[index]) : block.columns[index])
+  const displayRows = block.rows.map(row => displayColumnIndexes.map(index => {
+    const value = row[index] ?? null
+    if (isMarketplaceAudit) return marketplaceStatusCell(block.columns[index], value)
+    return isBuybackAudit && /keterangan/i.test(block.columns[index]) && typeof value === 'string' ? buybackAuditExplanation(value) : value
+  }))
+  const isPriceAuditTable = /^(?:Audit harga (?:penjualan(?: marketplace)?|buyback) perhiasan|Daftar acuan pemeriksaan harga)$/.test(block.title ?? '')
   const isBankReconciliationTable = displayColumns.some(column => /status\s+pemeriksaan/i.test(column))
     && displayColumns.some(column => /nominal\s+bank/i.test(column))
     && displayColumns.some(column => /keterangan\s+pemeriksaan/i.test(column))
   const isBankTransactionsTable = displayColumns.some(column => /rekening\s+toko/i.test(column))
     && displayColumns.some(column => /jenis\s+transaksi/i.test(column))
     && displayColumns.some(column => /uang\s+masuk/i.test(column))
+  const canExport = isBankReconciliationTable || isPriceAuditTable || isMarketplaceSalesTable
   const matchStatusIndex = displayColumns.findIndex(column => /status\s+pemeriksaan/i.test(column))
   const currencyColumns = displayColumns.map(currencyColumn)
   const weightColumns = displayColumns.map(weightColumn)
@@ -564,11 +581,21 @@ function AgentTable({ block }: { block: Extract<AgentResponseBlock, {type: 'tabl
     scrollToLatestAfterLoadRef.current = true
     setVisibleRows((current) => Math.min(current + tablePageSize, orderedRows.length))
   }
-  const exportReconciliation = async () => {
-    if (exporting || !isBankReconciliationTable || !displayColumns.length) return
+  const exportTable = async () => {
+    if (exporting || !canExport || !displayColumns.length) return
     setExporting(true)
     setExportError(null)
     try {
+      if (isMarketplaceSalesTable) {
+        const { exportMarketplaceSalesExcel } = await import('../lib/report-excel')
+        await exportMarketplaceSalesExcel({ title: block.title, columns: displayColumns, rows: orderedRows })
+        return
+      }
+      if (isPriceAuditTable) {
+        const { exportPriceAuditExcel } = await import('../lib/report-excel')
+        await exportPriceAuditExcel({ title: block.title, columns: displayColumns, rows: orderedRows })
+        return
+      }
       const { default: ExcelJS } = await import('exceljs')
       const workbook = new ExcelJS.Workbook()
       workbook.creator = 'Italy Agent AI'
@@ -657,7 +684,7 @@ function AgentTable({ block }: { block: Extract<AgentResponseBlock, {type: 'tabl
       setExporting(false)
     }
   }
-  return <section className={`agent-response-card agent-response-table-card${isRestockProjection ? ' is-restock-projection' : ''}${isBankReconciliationTable ? ' is-bank-reconciliation' : ''}${isBankTransactionsTable ? ' is-bank-transactions' : ''}`}>
+  return <section className={`agent-response-card agent-response-table-card${isRestockProjection ? ' is-restock-projection' : ''}${isBankReconciliationTable ? ' is-bank-reconciliation' : ''}${isBankTransactionsTable ? ' is-bank-transactions' : ''}${isBuybackAudit ? ' is-buyback-audit' : ''}`}>
     <div className="agent-response-table-heading-row">
       <CardTitle icon={<Table2 size={14} />} title={block.title} />
     </div>
@@ -668,13 +695,13 @@ function AgentTable({ block }: { block: Extract<AgentResponseBlock, {type: 'tabl
         const amount = currencyColumns[columnIndex] ? currencyCell(row[columnIndex]) : null
         const weight = weightColumns[columnIndex] ? weightCell(row[columnIndex]) : null
         const pcs = pcsColumns[columnIndex] ? pcsCell(row[columnIndex]) : null
-        let value = amount !== null ? tableCurrencyFormat.format(amount) : weight !== null ? tableWeightFormat.format(weight) : pcs !== null ? tablePcsFormat.format(pcs) : String(row[columnIndex] ?? '—')
+        let value = amount !== null ? (isPriceAuditTable && /gram/i.test(column) ? tableRateFormat : tableCurrencyFormat).format(amount) : weight !== null ? tableWeightFormat.format(weight) : pcs !== null ? tablePcsFormat.format(pcs) : String(row[columnIndex] ?? '—')
         if (isBankReconciliationTable && /keterangan\s+pemeriksaan/i.test(column) && matchStatusIndex >= 0 && /cocok/i.test(String(row[matchStatusIndex] ?? ''))) {
           value = 'Tanggal, nominal, dan status uang masuk/keluar cocok.'
         }
         const cellClass = [numericColumns[columnIndex] ? 'is-number' : '', tableColumnClass(column)].filter(Boolean).join(' ') || undefined
-        if (/status\s+pemeriksaan/i.test(column)) {
-          const matched = /cocok/i.test(value) && !/belum|tidak/i.test(value)
+        if (/(?:status|hasil)\s+pemeriksaan/i.test(column)) {
+          const matched = value === 'Masih dalam batas range acuan' || /cocok/i.test(value) && !/belum|tidak/i.test(value)
           return <td key={columnIndex} className={cellClass}><span className={`agent-response-bank-status${matched ? ' is-matched' : ' is-review'}`}>{matched ? <CheckCircle2 size={14} aria-hidden="true" /> : <AlertTriangle size={14} aria-hidden="true" />}{value.replace(/^✓\s*/, '')}</span></td>
         }
         if (/^(?:risiko\b|di bawah target)/i.test(column)) {
@@ -689,12 +716,12 @@ function AgentTable({ block }: { block: Extract<AgentResponseBlock, {type: 'tabl
         return <td key={columnIndex} className={cellClass}>{renderInline(value)}</td>
       })}</tr>)}</tbody>
     </table></div>
-    {(orderedRows.length > tablePageSize || isBankReconciliationTable) && <div className="agent-response-table-footer">
+    {(orderedRows.length > tablePageSize || canExport) && <div className="agent-response-table-footer">
       <span>Menampilkan {Math.min(visibleRows, orderedRows.length)} dari {orderedRows.length} data</span>
       {hasMoreRows && <button className="agent-response-load-more" type="button" aria-label="Tambah data ke tabel" title="Tambah data" onClick={loadMoreRows}>+</button>}
-      {isBankReconciliationTable && <div className="agent-response-export-actions">
+      {canExport && <div className="agent-response-export-actions">
         {exportError && <span className="agent-response-export-error" role="alert">{exportError}</span>}
-        <button className="agent-response-export-button" type="button" onClick={() => void exportReconciliation()} disabled={exporting} aria-label={exporting ? 'Menyiapkan file Excel' : 'Export Excel'}>
+        <button className="agent-response-export-button" type="button" onClick={() => void exportTable()} disabled={exporting} aria-label={exporting ? 'Menyiapkan file Excel' : isMarketplaceSalesTable ? `Export Excel penjualan online ${block.title ?? ''}`.trim() : isPriceAuditTable ? `Export Excel ${block.title}` : 'Export Excel'}>
           {exporting ? <LoaderCircle size={14} className="spin" aria-hidden="true" /> : <Download size={14} aria-hidden="true" />}
           <span>{exporting ? 'Menyiapkan…' : 'Export Excel'}</span>
         </button>

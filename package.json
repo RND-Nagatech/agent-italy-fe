@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test:report-scope": "node --test tests/agent-report-scope.test.ts",
+    "test:price-audit": "node --test tests/price-audit.test.ts",
+    "test:agent-attachments": "node --test tests/agent-attachment-files.test.ts tests/agent-folder-drop.test.ts",
+    "test:report-scope": "node --test tests/agent-report-scope.test.ts tests/agent-banking-follow-up.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

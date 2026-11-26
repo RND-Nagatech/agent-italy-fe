@@ -3,7 +3,12 @@ import { AgentKnowledgeReferences } from './components/AgentKnowledgeReferences'
 import { DeleteChatDialog } from './components/DeleteChatDialog'
 import { createRequestId } from './lib/request-id'
 import { isBankingQuery, type BankScopeResolved, type BankScopeResult, type BankSelection } from './lib/banking'
-import { agentSourceLabels, mentionsAgentSource, resolveAgentReportScope } from './lib/agent-report-scope'
+import { bankingFollowUpPrompt } from './lib/agent-banking-follow-up'
+import { AGENT_ATTACHMENT_ACCEPT, agentAttachmentMime, planAgentAttachments, type AgentAttachmentSource } from './lib/agent-attachment-files'
+import { isPriceAuditQuery, shouldCheckPriceAttachments, resolveChatPriceScope, readPriceAttachment, type PriceAuditSelection, type PriceAuditScope } from './lib/price-audit'
+import { PriceAuditForm } from './components/PriceAuditForm'
+import { AgentFolderDialog } from './components/AgentFolderDialog'
+import { resolveAgentReportScope } from './lib/agent-report-scope'
 import { AgentTemplateDialog } from './components/AgentTemplateDialog'
 import { useTableSort, type TableSort } from './lib/table-sort'
 import { SortHeader } from './components/TableSort'
@@ -28,6 +33,7 @@ import {
   Eye,
   EyeOff,
   Filter,
+  FolderOpen,
   Image as ImageIcon,
   LoaderCircle,
   LockKeyhole,
@@ -1639,6 +1645,10 @@ type AgentChatAttachmentView = AgentChatAttachment & {
   localPreviewUrl?: string
   isUploading?: boolean
 }
+type SubmittedPriceMessage = {
+  sessionId: string; messageId: string; content: string; attachments: AgentChatAttachmentView[]
+  stage: 'reading' | 'awaiting-scope' | 'error'; scope?: PriceAuditScope; error?: string
+}
 
 function AgentChatAttachmentItem({
   attachment,
@@ -1697,23 +1707,6 @@ type PendingAgentScopeClarification = {
   banking?: BankScopeResolved
 }
 
-function bankingFollowUpPrompt(value: string, messages: AgentChatMessage[], sources: AgentStatus['sources']) {
-  if (isBankingQuery(value) || !/\b(?:kalau|kalo|klo|terus|untuk|sekarang|yang)\b/i.test(value)) return null
-  const mentionedSources = sources.filter(source => mentionsAgentSource(value, source))
-  if (mentionedSources.length !== 1) return null
-  const previousBankingPrompt = [...messages].reverse().find(message => message.role === 'user' && isBankingQuery(message.content))?.content
-  if (!previousBankingPrompt) return null
-
-  let prompt = previousBankingPrompt
-  const labels = sources.flatMap(agentSourceLabels).sort((left, right) => right.length - left.length)
-  for (const label of labels) {
-    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
-    prompt = prompt.replace(new RegExp(`(^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, 'gi'), '$1 ')
-  }
-  const source = mentionedSources[0]
-  return `${prompt.replace(/\s+/g, ' ').trim()} Toko yang diminta: ${source.alias} (${source.branchId}).`
-}
-
 function formatAgentNaturalDate(value: string) {
   if (!value) return ''
   return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(new Date(`${value}T00:00:00+07:00`))
@@ -1749,6 +1742,9 @@ export function AgentPage() {
   const [pendingAttachments, setPendingAttachments] = useState<AgentChatAttachmentView[]>([])
   const [attachmentBusy, setAttachmentBusy] = useState(false)
   const [attachmentError, setAttachmentError] = useState<string | null>(null)
+  const [attachmentNotice, setAttachmentNotice] = useState<string | null>(null)
+  const [attachmentProgress, setAttachmentProgress] = useState('')
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false)
   const attachmentPreviewUrlsRef = useRef(new Set<string>())
   const previousAttachmentSessionRef = useRef<string | null>(null)
   const attachmentInputRef = useRef<HTMLInputElement>(null)
@@ -1760,6 +1756,8 @@ export function AgentPage() {
     for (const url of attachmentPreviewUrlsRef.current) URL.revokeObjectURL(url)
     attachmentPreviewUrlsRef.current.clear()
   }, [])
+
+  useEffect(() => { if (!pendingAttachments.length) setAttachmentNotice(null) }, [pendingAttachments.length])
 
   useEffect(() => {
     const previousSessionId = previousAttachmentSessionRef.current
@@ -1797,6 +1795,10 @@ export function AgentPage() {
   const [lastFailedRequestId, setLastFailedRequestId] = useState<string | null>(null)
   const [lastFailedBanking, setLastFailedBanking] = useState<BankSelection | undefined>(undefined)
   const [pendingScopeClarification, setPendingScopeClarification] = useState<PendingAgentScopeClarification | null>(null)
+  const [priceAuditPrompt, setPriceAuditPrompt] = useState<string | null>(null)
+  const [priceAuditScope, setPriceAuditScope] = useState<PriceAuditScope | undefined>(undefined)
+  const [lastFailedPriceAudit, setLastFailedPriceAudit] = useState<PriceAuditSelection | undefined>(undefined)
+  const [submittedPriceMessage, setSubmittedPriceMessage] = useState<SubmittedPriceMessage | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const transcriptRef = useRef<HTMLDivElement>(null)
   const followTranscriptRef = useRef(true)
@@ -1937,6 +1939,9 @@ export function AgentPage() {
       setSessions((current) => current.map((session) => session.id === detail.id ? sessionSummaryFromDetail(detail) : session))
       setActiveSessionId(detail.id)
       setMessages(detail.messages)
+      setSubmittedPriceMessage(null)
+      setPriceAuditPrompt(null)
+      setPriceAuditScope(undefined)
       setPendingScopeClarification(null)
       setPendingAttachments(detail.pendingAttachments ?? [])
       setAttachmentError(null)
@@ -1950,37 +1955,29 @@ export function AgentPage() {
     }
   }
 
-  const uploadAgentAttachments = async (fileList: FileList | null) => {
-    const files = fileList ? Array.from(fileList) : []
+  const uploadAgentAttachments = async (fileList: FileList | readonly File[] | null, source: AgentAttachmentSource = 'files') => {
+    const selected = fileList ? Array.from(fileList) : []
     const sessionId = activeSessionId
-    if (!files.length || !sessionId || attachmentBusy || busy) return
-    const maxFiles = status?.attachmentLimits?.maxFiles ?? 3
-    const maxFileBytes = (status?.attachmentLimits?.maxFileMb ?? 20) * 1024 * 1024
-    const maxImageBytes = (status?.attachmentLimits?.maxImageMb ?? 10) * 1024 * 1024
-    if (pendingAttachments.length + files.length > maxFiles) {
-      setAttachmentError(`Maksimal ${maxFiles} lampiran dalam satu pertanyaan.`)
-      return
-    }
-    if (files.some(file => file.size > maxFileBytes)) {
-      setAttachmentError(`Ukuran setiap file maksimal ${formatBytes(maxFileBytes)}.`)
-      return
-    }
-    const existingImageBytes = pendingAttachments.filter(file => file.mime.startsWith('image/')).reduce((sum, file) => sum + file.size, 0)
-    const newImageBytes = files.filter(file => file.type.startsWith('image/')).reduce((sum, file) => sum + file.size, 0)
-    if (existingImageBytes + newImageBytes > maxImageBytes) {
-      setAttachmentError(`Total ukuran gambar maksimal ${formatBytes(maxImageBytes)} dalam satu pertanyaan.`)
-      return
-    }
+    if (!selected.length || !sessionId || attachmentBusy || busy || bankingScopeBusy || sessionActionBusy) return
+    const selection = planAgentAttachments(selected, source, pendingAttachments, {
+      maxFiles: status?.attachmentLimits?.maxFiles ?? 8,
+      maxFileBytes: (status?.attachmentLimits?.maxFileMb ?? 20) * 1024 * 1024,
+      maxImageBytes: (status?.attachmentLimits?.maxImageMb ?? 10) * 1024 * 1024,
+    })
+    if (selection.error) { setAttachmentError(selection.error); return }
+    const { files, folderName, skipped } = selection
+    const skippedNotice = skipped.length ? ` ${skipped.length} file lain dilewati: ${skipped.slice(0, 3).join(', ')}${skipped.length > 3 ? ', …' : ''}.` : ''
 
     const stagedFiles = files.map((file, index) => {
-      const localPreviewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+      const mime = agentAttachmentMime(file)!
+      const localPreviewUrl = mime.startsWith('image/') ? URL.createObjectURL(file) : undefined
       if (localPreviewUrl) attachmentPreviewUrlsRef.current.add(localPreviewUrl)
       return {
         file,
         attachment: {
           id: `upload-${Date.now()}-${index}-${file.name}`,
           filename: file.name,
-          mime: file.type || 'application/octet-stream',
+          mime,
           size: file.size,
           createdAt: new Date().toISOString(),
           ...(localPreviewUrl ? { localPreviewUrl } : {}),
@@ -1991,11 +1988,13 @@ export function AgentPage() {
 
     setAttachmentBusy(true)
     setAttachmentError(null)
+    setAttachmentNotice(folderName ? `Folder ${folderName}: ${files.length} gambar/PDF dipilih, termasuk isi subfolder.${skippedNotice}` : null)
     setPendingScopeClarification(null)
     setPendingAttachments(current => [...current, ...stagedFiles.map(item => item.attachment)])
     const uploadedIds = new Set<string>()
     try {
       for (const staged of stagedFiles) {
+        setAttachmentProgress(`Mengunggah ${uploadedIds.size + 1} dari ${stagedFiles.length} file…`)
         const form = new FormData()
         form.append('file', staged.file)
         const attachment = await request<AgentChatAttachment>(`/agent/sessions/${sessionId}/attachments`, { method: 'POST', body: form })
@@ -2004,6 +2003,7 @@ export function AgentPage() {
           ? { ...attachment, ...(staged.attachment.localPreviewUrl ? { localPreviewUrl: staged.attachment.localPreviewUrl } : {}), isUploading: false }
           : item))
       }
+      if (folderName) setAttachmentNotice(`${files.length} file dari folder ${folderName} siap dikirim.${skippedNotice}`)
     } catch (error) {
       const unsuccessful = stagedFiles.filter(item => !uploadedIds.has(item.attachment.id))
       const unsuccessfulIds = new Set(unsuccessful.map(item => item.attachment.id))
@@ -2015,8 +2015,10 @@ export function AgentPage() {
         }
       }
       setAttachmentError(error instanceof Error ? error.message : 'Lampiran tidak dapat diunggah.')
+      if (folderName) setAttachmentNotice(uploadedIds.size ? `${uploadedIds.size} dari ${files.length} file folder ${folderName} berhasil diunggah. File yang berhasil tetap ada di lampiran.${skippedNotice}` : null)
     } finally {
       setAttachmentBusy(false)
+      setAttachmentProgress('')
     }
   }
 
@@ -2029,6 +2031,7 @@ export function AgentPage() {
     try {
       await request<void>(`/agent/sessions/${sessionId}/attachments/${attachment.id}`, { method: 'DELETE' })
       setPendingAttachments(current => current.filter(item => item.id !== attachment.id))
+      setAttachmentNotice(null)
       if (attachment.localPreviewUrl) {
         URL.revokeObjectURL(attachment.localPreviewUrl)
         attachmentPreviewUrlsRef.current.delete(attachment.localPreviewUrl)
@@ -2078,6 +2081,9 @@ export function AgentPage() {
       setSessions((current) => [created, ...current])
       setActiveSessionId(created.id)
       setMessages([])
+      setSubmittedPriceMessage(null)
+      setPriceAuditPrompt(null)
+      setPriceAuditScope(undefined)
       setPendingScopeClarification(null)
       setPendingAttachments([])
       setAttachmentError(null)
@@ -2120,18 +2126,65 @@ export function AgentPage() {
     } finally { setSessionActionBusy(false) }
   }
 
-  const sendMessage = async (messageText: string, retrying = false, retryRequestId?: string, skipScopeClarification = false, selectedBanking?: BankSelection, reuseLastTranscriptMessage = false) => {
-    const content = messageText.trim() || (!retrying && pendingAttachments.length ? 'Tolong analisis lampiran yang saya kirim.' : '')
+  const sendMessage = async (messageText: string, retrying = false, retryRequestId?: string, skipScopeClarification = false, selectedBanking?: BankSelection, reuseLastTranscriptMessage = false, selectedPriceAudit?: PriceAuditSelection, submitted?: SubmittedPriceMessage) => {
+    const outgoingAttachments = submitted?.attachments ?? pendingAttachments
+    const content = messageText.trim() || (!retrying && outgoingAttachments.length ? 'Tolong analisis lampiran yang saya kirim.' : '')
     const sessionId = activeSessionId
-    if (!content || busy || bankingScopeBusy || attachmentBusy || !sessionId || !status?.configured || !status.sources.length) return
-    const attachmentsToSend = retrying ? [] : pendingAttachments
-    const nextMessages: AgentChatMessage[] = retrying || reuseLastTranscriptMessage
+    if (!content || busy || bankingScopeBusy || attachmentBusy || !sessionId || !status?.configured || !status.sources.length || (submitted && submitted.sessionId !== sessionId)) return
+    let priceAudit = selectedPriceAudit ?? (retrying ? lastFailedPriceAudit : undefined)
+    let optimisticPriceMessage = false
+    let nextMessages: AgentChatMessage[] = retrying || reuseLastTranscriptMessage
       ? messages.slice(-50)
-      : [...messages, { role: 'user' as const, content, ...(attachmentsToSend.length ? { attachments: attachmentsToSend } : {}) }].slice(-50)
+      : [...messages, { role: 'user' as const, content, ...(outgoingAttachments.length ? { attachments: outgoingAttachments } : {}) }].slice(-50)
+    if (!retrying && !priceAudit && shouldCheckPriceAttachments(content, outgoingAttachments.length)) {
+      const sent: SubmittedPriceMessage = submitted ?? { sessionId, messageId: `local-price-${createRequestId()}`, content, attachments: [...outgoingAttachments], stage: 'reading' }
+      if (!reuseLastTranscriptMessage) nextMessages = nextMessages.map((message, index) => index === nextMessages.length - 1 ? { ...message, id: sent.messageId } : message)
+      optimisticPriceMessage = true
+      setMessages(nextMessages)
+      if (!submitted) { setDraft(''); setPendingAttachments([]) }
+      if (questionInputRef.current) questionInputRef.current.style.height = 'auto'
+      setSubmittedPriceMessage({ ...sent, stage: 'reading', error: undefined })
+      setBankingScopeBusy(true)
+      setSendError(null)
+      setLastFailedPrompt(null)
+      setLastFailedRequestId(null)
+      setChatProgress({ requestId: '', stage: 'preparing', message: 'Membaca file acuan harga', detail: 'Memeriksa tanggal, batch, jam mulai berlaku, jenis acuan, kode barang, dan harga pada dokumen.', updatedAt: new Date().toISOString() })
+      try {
+        const resolved = await resolveChatPriceScope(outgoingAttachments.map(a => a.id),
+          async attachmentIds => {
+            if (attachmentIds.length === 1) {
+              const file = outgoingAttachments.find(a => a.id === attachmentIds[0])!
+              const read = await readPriceAttachment(sessionId, file.id, request, state => setChatProgress({ requestId: '', stage: 'reading', message: state.message, detail: `${file.filename} · ${Math.floor(state.elapsedMs / 1000)} detik · Lampiran tersimpan di pesan ini.`, updatedAt: new Date().toISOString() }))
+              if (!read.handled) return { handled: false }
+            }
+            return request<PriceAuditScope>('/agent/price-audit/scope', { method: 'POST', body: JSON.stringify({ prompt: content, sessionId, attachmentIds }) })
+          },
+          (done, total) => setChatProgress({ requestId: '', stage: 'preparing', message: `Membaca file acuan harga (${done}/${total})`, detail: 'Tanggal mengikuti header dokumen; file yang selesai dibaca disimpan untuk pemeriksaan ini.', updatedAt: new Date().toISOString() }))
+        if (resolved.handled) {
+          if (resolved.selection) priceAudit = resolved.selection
+          else { setSubmittedPriceMessage({ ...sent, stage: 'awaiting-scope', scope: resolved }); setPriceAuditScope(resolved); setPriceAuditPrompt(content); return }
+        } else if (isPriceAuditQuery(content)) {
+          throw new Error('Lampiran belum dikenali sebagai tabel harga perhiasan. Periksa gambar yang dikirim.')
+        } else {
+          setSubmittedPriceMessage(null)
+        }
+      } catch (error) {
+        setSubmittedPriceMessage({ ...sent, stage: 'error', error: error instanceof Error ? error.message : 'File harga belum dapat dibaca. Coba lagi menggunakan lampiran di pesan ini.' }); return
+      } finally { setBankingScopeBusy(false); setChatProgress(null) }
+    }
+    if (!retrying && !priceAudit && !outgoingAttachments.length && isPriceAuditQuery(content)) {
+      setPriceAuditScope(undefined)
+      setPriceAuditPrompt(content)
+      setDraft('')
+      setSendError(null)
+      return
+    }
+    const attachmentsToSend = retrying ? [] : priceAudit ? outgoingAttachments.filter(a => priceAudit.windows.some(w => w.attachmentIds.includes(a.id))) : outgoingAttachments
+    if (!priceAudit && attachmentsToSend.length > 3) { setSendError('Maksimal 3 lampiran untuk analisis umum atau mutasi. Hingga 8 file didukung untuk pemeriksaan harga perhiasan.'); return }
     let banking = selectedBanking ?? (retrying ? lastFailedBanking : undefined)
-    const bankingFollowUp = !retrying && !skipScopeClarification ? bankingFollowUpPrompt(content, messages, status.sources) : null
+    const bankingFollowUp = !priceAudit && !retrying && !skipScopeClarification ? bankingFollowUpPrompt(content, messages, status.sources) : null
     const bankingPrompt = bankingFollowUp ?? content
-    if (!retrying && !skipScopeClarification && (isBankingQuery(content) || bankingFollowUp || pendingAttachments.length)) {
+    if (!priceAudit && !retrying && !skipScopeClarification && (isBankingQuery(content) || bankingFollowUp || outgoingAttachments.length)) {
       // Put the user's message in the transcript before the scope lookup starts.
       setMessages(nextMessages)
       setDraft('')
@@ -2149,15 +2202,14 @@ export function AgentPage() {
           banking = resolved.selection
         }
       } catch (error) {
-        setMessages(messages)
-        setDraft(content)
-        if (attachmentsToSend.length) setPendingAttachments(attachmentsToSend)
-        setSendError(error instanceof Error ? error.message : 'Bank dan rekening belum dapat diperiksa. Coba lagi.')
+        if (optimisticPriceMessage) setSubmittedPriceMessage({ sessionId, messageId: nextMessages.at(-1)!.id!, content, attachments: [...outgoingAttachments], stage: 'error', error: error instanceof Error ? error.message : 'Lampiran belum dapat diperiksa. Coba lagi.' })
+        else { setMessages(messages); setDraft(content); if (attachmentsToSend.length) setPendingAttachments(attachmentsToSend) }
+        if (!optimisticPriceMessage) setSendError(error instanceof Error ? error.message : 'Bank dan rekening belum dapat diperiksa. Coba lagi.')
         return
       } finally { setBankingScopeBusy(false); setChatProgress(null) }
     }
 
-    const reportScope = !banking && !retrying && !skipScopeClarification && !attachmentsToSend.length
+    const reportScope = !priceAudit && !banking && !retrying && !skipScopeClarification && !attachmentsToSend.length
       ? resolveAgentReportScope(content, status.sources)
       : null
     if (reportScope && (reportScope.needsDate || reportScope.needsSource)) {
@@ -2178,13 +2230,15 @@ export function AgentPage() {
     }
 
     setPendingScopeClarification(null)
+    setSubmittedPriceMessage(null)
     setMessages(nextMessages)
-    setDraft('')
-    if (!retrying) setPendingAttachments([])
+    if (!retrying && !reuseLastTranscriptMessage) setDraft('')
+    if (!retrying && !submitted) setPendingAttachments([])
     setBusy(true)
     setSendError(null)
     setLastFailedPrompt(null)
     setLastFailedRequestId(null)
+    setLastFailedPriceAudit(undefined)
     let keepPolling = true
     let progressTimer: number | undefined
     setChatProgress({
@@ -2220,10 +2274,11 @@ export function AgentPage() {
           sessionId,
           requestId,
           ...(banking ? { banking } : {}),
+          ...(priceAudit ? { priceAudit } : {}),
           messages: requestMessages.map(({ role, content: text, attachments }, index) => ({
             role,
             content: limitAgentRequestContent(text),
-            ...(role === 'user' && index === latestUserIndex && attachments?.length ? { attachmentIds: attachments.map(attachment => attachment.id) } : {}),
+            ...(!priceAudit && role === 'user' && index === latestUserIndex && attachments?.length ? { attachmentIds: attachments.map(attachment => attachment.id) } : {}),
           })),
         }),
       })
@@ -2237,6 +2292,7 @@ export function AgentPage() {
       setLastFailedPrompt(content)
       setLastFailedRequestId(requestId)
       setLastFailedBanking(banking)
+      setLastFailedPriceAudit(priceAudit)
     } finally {
       keepPolling = false
       if (progressTimer !== undefined) window.clearTimeout(progressTimer)
@@ -2277,8 +2333,10 @@ export function AgentPage() {
     <div className="agent-page" ref={agentPageRef}>
       <h1 className="sr-only">Agent AI</h1>
       {statusError && <DataNotice kind="warning">{statusError}</DataNotice>}
+      {priceAuditPrompt && activeSessionId && <PriceAuditForm key={activeSessionId} sessionId={activeSessionId} initialScope={priceAuditScope} onClose={() => { if (submittedPriceMessage?.sessionId !== activeSessionId || submittedPriceMessage.content !== priceAuditPrompt) setDraft(priceAuditPrompt); setPriceAuditPrompt(null); setPriceAuditScope(undefined) }} onSubmit={selection => { const prompt = priceAuditPrompt; const sent = submittedPriceMessage?.sessionId === activeSessionId && submittedPriceMessage.content === prompt ? submittedPriceMessage : undefined; setPriceAuditPrompt(null); setPriceAuditScope(undefined); void sendMessage(prompt, false, undefined, true, undefined, Boolean(sent), selection, sent) }} />}
       {pendingSessionDelete && <DeleteChatDialog title={pendingSessionDelete.title} busy={sessionActionBusy} error={sessionDeleteError} onClose={() => { if (!sessionActionBusy) setPendingSessionDelete(null) }} allowForgetMemory={user?.role === 'admin' || user?.role === 'pusat'} onConfirm={forget => void deleteChatSession(forget)} />}
       {selectedTemplateGroup && <AgentTemplateDialog group={selectedTemplateGroup} disabled={!canChat || busy || attachmentBusy || sessionActionBusy || Boolean(pendingAttachments.length)} onClose={() => setTemplateGroupTitle(null)} onSelect={prompt => { setTemplateGroupTitle(null); setContextOpen(false); void sendMessage(prompt) }} />}
+      {folderDialogOpen && <AgentFolderDialog pending={pendingAttachments} limits={{ maxFiles: status?.attachmentLimits?.maxFiles ?? 8, maxFileBytes: (status?.attachmentLimits?.maxFileMb ?? 20) * 1024 * 1024, maxImageBytes: (status?.attachmentLimits?.maxImageMb ?? 10) * 1024 * 1024 }} disabled={!canChat || busy || bankingScopeBusy || attachmentBusy || sessionActionBusy} onClose={() => setFolderDialogOpen(false)} onAttach={(files, source) => { setFolderDialogOpen(false); void uploadAgentAttachments(files, source) }} />}
       <div className={`agent-workspace${contextOpen ? ' is-context-open' : ''}`}>
         <section className="agent-chat-panel panel" aria-label="Percakapan Agent AI">
           <header className="agent-chat-header">
@@ -2309,7 +2367,14 @@ export function AgentPage() {
             </div> : <div className="agent-message-list">
               {messages.map((message, index) => <article id={message.id ? `agent-message-${message.id}` : undefined} className={`agent-message ${message.role === 'user' ? 'is-user' : 'is-assistant'}${message.id === highlightedMessageId ? ' is-history-match' : ''}`} key={message.id ?? `${index}-${message.role}`}>
                 {message.role === 'assistant' && <span className="agent-message-mark"><Bot size={15} /></span>}
-                <div className="agent-message-content">{message.role === 'assistant' ? <><AgentResponse blocks={message.blocks} fallbackText={message.content} /><AgentKnowledgeReferences {...message} />{message.requestId && <AgentAnswerFeedback requestId={message.requestId} initialFeedback={message.feedback} />}</> : <>{Boolean(message.attachments?.length) && <div className="agent-message-attachments">{message.attachments?.map(attachment => <AgentChatAttachmentItem key={attachment.id} attachment={attachment} sessionId={activeSessionId ?? ''} />)}</div>}<p>{message.content}</p></>}{Boolean(message.usedSources?.length) && <div className="agent-message-sources"><Database size={12} /><span>{message.usedSources?.map((source) => `${source.alias} (${source.branchId})`).join(' · ')}</span></div>}</div>
+                <div className="agent-message-content">{message.role === 'assistant' ? <><AgentResponse blocks={message.blocks} fallbackText={message.content} /><AgentKnowledgeReferences {...message} />{message.requestId && <AgentAnswerFeedback requestId={message.requestId} initialFeedback={message.feedback} />}</> : <>
+                  {Boolean(message.attachments?.length) && <div className="agent-message-attachments">{message.attachments?.map(attachment => <AgentChatAttachmentItem key={attachment.id} attachment={attachment} sessionId={activeSessionId ?? ''} />)}</div>}
+                  <p>{message.content}</p>
+                  {submittedPriceMessage?.sessionId === activeSessionId && submittedPriceMessage.messageId === message.id && <>
+                    {submittedPriceMessage.stage === 'error' && <div className="agent-send-error agent-price-read-error" role="alert"><span>{submittedPriceMessage.error}</span><button type="button" className="text-link" disabled={busy} onClick={() => void sendMessage(submittedPriceMessage.content, false, undefined, false, undefined, true, undefined, submittedPriceMessage)}>Coba lagi</button></div>}
+                    {submittedPriceMessage.stage === 'awaiting-scope' && !priceAuditPrompt && <button type="button" className="button button-secondary" disabled={busy} onClick={() => { setPriceAuditScope(submittedPriceMessage.scope); setPriceAuditPrompt(submittedPriceMessage.content) }}>Lengkapi acuan pemeriksaan</button>}
+                  </>}
+                </>}{Boolean(message.usedSources?.length) && <div className="agent-message-sources"><Database size={12} /><span>{message.usedSources?.map((source) => `${source.alias} (${source.branchId})`).join(' · ')}</span></div>}</div>
                 {message.role === 'user' && <span className="agent-message-mark is-user" aria-hidden="true"><UserRound size={15} /></span>}
               </article>)}
               {pendingScopeClarification && <article className="agent-message is-assistant agent-scope-message">
@@ -2329,14 +2394,16 @@ export function AgentPage() {
 
             <form className="agent-composer" onSubmit={(event) => { event.preventDefault(); void sendMessage(draft) }}>
               {Boolean(pendingAttachments.length) && <div className="agent-composer-files" aria-label="Lampiran yang akan dikirim">{pendingAttachments.map(attachment => <AgentChatAttachmentItem key={attachment.id} attachment={attachment} sessionId={activeSessionId ?? ''} onRemove={() => void removePendingAttachment(attachment)} disabled={attachmentBusy || busy} />)}</div>}
-              {attachmentBusy && <div className="agent-attachment-status" role="status"><LoaderCircle size={13} className="spin" /> Mengunggah lampiran…</div>}
+              {attachmentNotice && <div className="agent-attachment-notice" role="status">{attachmentNotice}</div>}
+              {attachmentBusy && <div className="agent-attachment-status" role="status"><LoaderCircle size={13} className="spin" /> {attachmentProgress || 'Menyiapkan lampiran…'}</div>}
               {attachmentError && <div className="agent-attachment-error" role="alert">{attachmentError}</div>}
-              <input ref={attachmentInputRef} className="sr-only" type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,application/pdf,image/jpeg,image/png,image/gif,image/webp" multiple disabled={!canChat || busy || attachmentBusy || sessionActionBusy} onChange={event => { void uploadAgentAttachments(event.currentTarget.files); event.currentTarget.value = '' }} />
+              <input ref={attachmentInputRef} hidden type="file" accept={AGENT_ATTACHMENT_ACCEPT} multiple disabled={!canChat || busy || bankingScopeBusy || attachmentBusy || sessionActionBusy} onChange={event => { void uploadAgentAttachments(event.currentTarget.files); event.currentTarget.value = '' }} />
               <label className="sr-only" htmlFor="agent-question">Tulis pertanyaan</label>
               <textarea ref={questionInputRef} id="agent-question" rows={1} maxLength={20_000} placeholder={canChat ? 'Tanyakan sesuatu tentang data cabang…' : 'Memuat room atau lengkapi koneksi Agent AI terlebih dahulu'} value={draft} onChange={(event) => { setDraft(event.target.value); event.target.style.height = 'auto'; event.target.style.height = `${Math.min(event.target.scrollHeight, 96)}px` }} disabled={!canChat || busy || bankingScopeBusy || attachmentBusy || sessionActionBusy} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void sendMessage(draft) } }} />
               <button className="agent-attach-button" type="button" aria-label="Lampirkan gambar atau PDF" title="Lampirkan gambar atau PDF" disabled={!canChat || busy || bankingScopeBusy || attachmentBusy || sessionActionBusy} onClick={() => attachmentInputRef.current?.click()}><Paperclip size={16} /></button>
+              <button className="agent-attach-button agent-folder-button" type="button" aria-label="Lampirkan folder" title="Lampirkan folder" disabled={!canChat || busy || bankingScopeBusy || attachmentBusy || sessionActionBusy} onClick={() => setFolderDialogOpen(true)}><FolderOpen size={18} /></button>
               <button className="agent-send-button" type="submit" aria-label="Kirim pertanyaan" disabled={!canChat || busy || bankingScopeBusy || attachmentBusy || sessionActionBusy || (!draft.trim() && !pendingAttachments.length)}>{busy || bankingScopeBusy ? <LoaderCircle size={17} className="spin" /> : <Send size={16} />}</button>
-              <p>Enter untuk mengirim · Shift + Enter baris baru · Gambar/PDF maks. {status?.attachmentLimits?.maxFileMb ?? 20} MB</p>
+              <p>Enter untuk mengirim · Shift + Enter baris baru · Pilih file atau folder · Maks. {status?.attachmentLimits?.maxFiles ?? 8} gambar/PDF</p>
             </form>
           </div>
         </section>

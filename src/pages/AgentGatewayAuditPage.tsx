@@ -11,7 +11,7 @@ type AuditRow = {
   sessionId: string | null
   actorEmail: string
   questionPreview: string | null
-  kind: 'chat' | 'room-summary' | 'memory-learning' | 'bank-extraction'
+  kind: 'chat' | 'room-summary' | 'memory-learning' | 'bank-extraction' | 'price-extraction'
   round: number
   model: string
   method: 'POST'
@@ -166,7 +166,7 @@ export function AgentGatewayAuditPage() {
             : list?.data.length ? list.data.map(row => <tr key={row.id} className={selectedId === row.id ? 'is-selected' : ''}>
               <td><button className="gateway-audit-row-button" type="button" onClick={() => setSelectedId(row.id)}><strong>{formatTime(row.createdAt)}</strong><small>{row.actorEmail}</small></button></td>
               <td><button className="gateway-audit-row-button" type="button" onClick={() => setSelectedId(row.id)}><strong title={row.exchangeRequestId}>{row.exchangeRequestId}</strong><small title={row.sessionId || ''}>{row.sessionId || 'Percakapan tanpa room'}</small><small className="gateway-audit-question-preview" title={row.questionPreview || ''}>{row.questionPreview || (row.kind === 'room-summary' ? 'Ringkasan konteks room' : 'Pertanyaan tidak tersedia')}</small></button></td>
-              <td><span className="gateway-audit-kind">{row.kind === 'room-summary' ? 'Ringkasan room' : row.kind === 'bank-extraction' ? 'Pembacaan rekening' : row.kind === 'memory-learning' ? `Pembelajaran memory · ${row.round}` : `Chat · ${row.round}`}</span><small>{row.model}</small></td>
+              <td><span className="gateway-audit-kind">{row.kind === 'room-summary' ? 'Ringkasan room' : row.kind === 'bank-extraction' ? 'Pembacaan rekening' : row.kind === 'price-extraction' ? 'Pembacaan harga' : row.kind === 'memory-learning' ? `Pembelajaran memory · ${row.round}` : `Chat · ${row.round}`}</span><small>{row.model}</small></td>
               <td><span className={`gateway-audit-status is-${row.outcome}`}>{row.statusCode ?? outcomeLabel[row.outcome]}</span></td>
               <td className="is-number">{row.latencyMs == null ? '—' : `${(row.latencyMs / 1000).toFixed(2)} dtk`}</td>
               <td className="is-number">{formatNumber(row.payloadBytes)} B</td>
