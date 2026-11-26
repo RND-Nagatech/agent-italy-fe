@@ -38,6 +38,44 @@ test('opens the price form for audit requests, leaving stock and banking request
   for (const text of ['jumlah stok saat ini', 'penjualan hari ini', 'cek penjualan transfer dengan mutasi bank', 'kalo italy pusat']) assert.equal(isPriceAuditQuery(text), false, text)
 })
 
+test('bullion buyback Excel retains categories, per-weight tariffs, dynamic batches and invoice authorizations', async () => {
+  const originalDocument=globalThis.document,originalWindow=globalThis.window,originalCreate=URL.createObjectURL
+  let exported:Blob|undefined
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:()=>({href:'',download:'',click(){},remove(){}}),body:{appendChild(){}}}})
+  Object.defineProperty(globalThis,'window',{configurable:true,value:{setTimeout(){}}})
+  URL.createObjectURL=blob=>{exported=blob as Blob;return 'blob:bullion-buyback'}
+  try {
+    const columns=['Tanggal','Jam WIB','No. Faktur','Nama Barang','Kode Grup','Kategori Acuan','Berat (gram)','Harga Buyback (IDR)','Harga Nota (IDR)','Harga Rata per gram (IDR)','Acuan Batch 1 (IDR/gram)','Selisih Batch 1 (IDR/gram)','Acuan Batch 3 (IDR/gram)','Selisih Batch 3 (IDR/gram)','Batch Acuan','Hasil Pemeriksaan','Keterangan Pemeriksaan','Otorisasi di Atas Nota','Deskripsi Otorisasi','Keterangan Otorisasi','File Acuan']
+    const rows=[['2026-11-25','13:07:32','FB-LM-1','ANTAM CERTI EYE RED 2026','LM','ANTAM 2026',0.5,1234567.5,1200000,2460000,2458000,2000,2470000,-10000,'Batch 1','Di luar range acuan','Harga buyback lebih tinggi Rp2.000 dari acuan.','Ada otorisasi','PEMBELIAN DI ATAS NOTA','FB-LM-1: Disetujui supervisor','Buyback LM.png'],['2026-11-25','14:00:00','FB-LM-2','EMASKU','LMM','EMASKU',3,6285000,6000000,2095000,'Tarif belum tersedia','Belum dapat dihitung','Tarif belum tersedia','Belum dapat dihitung','Batch 1','Perlu diperhatikan','Tarif EMASKU 3 gram kosong pada file.','Tidak ditemukan','Tidak ditemukan','Tidak ditemukan otorisasi pembelian di atas nota.','Buyback LM.png']]
+    await exportPriceAuditExcel({title:'Audit harga buyback logam mulia',columns,rows});assert.ok(exported)
+    const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(Buffer.from(await exported.arrayBuffer()));const sheet=workbook.getWorksheet('Buyback LM')!
+    assert.equal(sheet.getCell('A1').value,'Audit harga buyback logam mulia');assert.deepEqual(sheet.getRow(2).values.slice(1),columns);assert.equal(sheet.autoFilter,'A2:U4');assert.equal(sheet.views[0].ySplit,2)
+    assert.equal(sheet.getCell('B3').value,'13:07:32');assert.equal(sheet.getCell('F3').value,'ANTAM 2026');assert.equal(sheet.getCell('G3').value,0.5);assert.equal(sheet.getCell('H3').value,1234567.5)
+    assert.equal(sheet.getCell('K3').value,2458000);assert.equal(sheet.getCell('L3').value,2000);assert.equal(sheet.getCell('M3').value,2470000);assert.equal(sheet.getCell('N3').value,-10000);assert.match(sheet.getCell('N3').numFmt,/Rp/)
+    assert.equal(sheet.getCell('S3').value,'PEMBELIAN DI ATAS NOTA');assert.equal(sheet.getCell('T3').value,'FB-LM-1: Disetujui supervisor');assert.equal(sheet.getCell('K4').value,'Tarif belum tersedia')
+    assert.equal((sheet.getCell('P3').font.color as {argb:string}).argb,'FFB73535');assert.equal((sheet.getCell('P4').font.color as {argb:string}).argb,'FF986218')
+  } finally {Object.defineProperty(globalThis,'document',{configurable:true,value:originalDocument});Object.defineProperty(globalThis,'window',{configurable:true,value:originalWindow});URL.createObjectURL=originalCreate}
+})
+
+test('bullion marketplace Excel distinguishes raw piece tariffs from gram references and retains authorization and overpayment fields',async()=>{
+  const originalDocument=globalThis.document,originalWindow=globalThis.window,originalCreate=URL.createObjectURL
+  let exported:Blob|undefined
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:()=>({href:'',download:'',click(){},remove(){}}),body:{appendChild(){}}}})
+  Object.defineProperty(globalThis,'window',{configurable:true,value:{setTimeout(){}}})
+  URL.createObjectURL=blob=>{exported=blob as Blob;return 'blob:bullion-marketplace'}
+  try{
+    const columns=['No. Faktur','Marketplace','Nama Barang','Kategori Acuan','Berat (gram)','Harga Jual (IDR)','Harga Transaksi per gram (IDR)','Satuan Harga File','Dasar Pemeriksaan','Tarif File Batch 1 (IDR)','Acuan Batch 1 (IDR)','Selisih Batch 1 (IDR)','Tarif File Batch 3 (IDR)','Acuan Batch 3 (IDR)','Selisih Batch 3 (IDR)','Hasil Pemeriksaan','Otorisasi di Bawah Modal','Deskripsi Otorisasi','Keterangan Otorisasi','Pengembalian Kelebihan Pembayaran (IDR)']
+    const rows=[['J-GIFT','TIKTOK','ANTAM GIFT 2026','Gift',0.5,1425000,2850000,'Per piece','Per gram (harga_gram)',1425000,2850000,0,1430000,2860000,-10000,'Masih dalam batas range acuan','Ada otorisasi','PENJUALAN DI BAWAH MODAL','J-GIFT: Disetujui harga khusus',25000.5],['J-MICRO','TIKTOK','ANTAM MICRO GOLD','Micro Gold',0.1,294000,2940000,'Belum dapat ditentukan','Per gram (harga_gram)','Tarif belum tersedia','Tarif belum tersedia','Belum dapat dihitung','Tarif belum tersedia','Tarif belum tersedia','Belum dapat dihitung','Perlu diperhatikan','Tidak ditemukan','Tidak ditemukan','Tidak ditemukan otorisasi',0]]
+    await exportMarketplaceSalesExcel({title:'Audit harga penjualan marketplace logam mulia',columns,rows});assert.ok(exported)
+    const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(Buffer.from(await exported.arrayBuffer()));const sheet=workbook.getWorksheet('Penjualan LM')!
+    assert.equal(sheet.getCell('A1').value,'Audit harga penjualan marketplace logam mulia');assert.equal(workbook.subject,'Pemeriksaan harga penjualan marketplace');assert.deepEqual(sheet.getRow(2).values.slice(1),columns)
+    assert.equal(sheet.autoFilter,'A2:T4');assert.equal(sheet.views[0].ySplit,2);assert.equal(sheet.getCell('D3').value,'Gift');assert.equal(sheet.getCell('H3').value,'Per piece')
+    assert.equal(sheet.getCell('J3').value,1425000);assert.equal(sheet.getCell('K3').value,2850000);assert.equal(sheet.getCell('L3').value,0);assert.equal(sheet.getCell('N3').value,2860000);assert.equal(sheet.getCell('O3').value,-10000);assert.match(sheet.getCell('O3').numFmt,/Rp/)
+    assert.equal(sheet.getCell('R3').value,'PENJUALAN DI BAWAH MODAL');assert.equal(sheet.getCell('T3').value,25000.5);assert.equal(sheet.getCell('T4').value,0)
+    assert.equal((sheet.getCell('P3').font.color as {argb:string}).argb,'FF147A69');assert.equal((sheet.getCell('P4').font.color as {argb:string}).argb,'FF986218')
+  }finally{Object.defineProperty(globalThis,'document',{configurable:true,value:originalDocument});Object.defineProperty(globalThis,'window',{configurable:true,value:originalWindow});URL.createObjectURL=originalCreate}
+})
+
 test('marketplace price audit Excel retains grades, native prices, deltas, batches and shared styling', async () => {
   const originalDocument = globalThis.document, originalWindow = globalThis.window, originalCreate = URL.createObjectURL
   let exported: Blob | undefined, filename = ''

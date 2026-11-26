@@ -12,19 +12,19 @@ function columnName(index: number) {
 }
 
 export function exportPriceAuditExcel(table: ExcelTable) {
-  const name = /daftar acuan/i.test(table.title ?? '') ? 'Daftar Acuan' : /penjualan/i.test(table.title ?? '') ? 'Penjualan' : 'Buyback'
-  const display = table.title === 'Audit harga buyback perhiasan' ? { ...table, rows: table.rows.map(row => row.map((value, index) =>
+  const name = /daftar acuan/i.test(table.title ?? '') ? 'Daftar Acuan' : /penjualan/i.test(table.title ?? '') ? 'Penjualan' : /logam mulia/i.test(table.title ?? '') ? 'Buyback LM' : 'Buyback'
+  const display = /^Audit harga buyback (?:perhiasan|logam mulia)$/.test(table.title ?? '') ? { ...table, rows: table.rows.map(row => row.map((value, index) =>
     /keterangan/i.test(table.columns[index]) && typeof value === 'string' ? buybackAuditExplanation(value) : value,
   )) } : table
   return exportTableExcel(display, name, 'Pemeriksaan harga penjualan dan buyback')
 }
 
 export function exportMarketplaceSalesExcel(table: ExcelTable) {
-  const audit = table.title === 'Audit harga penjualan marketplace perhiasan'
+  const audit = /^Audit harga penjualan marketplace (?:perhiasan|logam mulia)$/.test(table.title ?? '')
   const title = audit ? table.title! : table.title ? `Penjualan Online — ${table.title}` : 'Penjualan Online Marketplace'
   const columns = table.columns.map(marketplaceColumnLabel)
   const rows = audit ? table.rows.map(row => row.map((value, index) => marketplaceStatusCell(table.columns[index], value))) : table.rows
-  return exportTableExcel({ ...table, title, columns, rows }, 'Penjualan Online', audit ? 'Pemeriksaan harga penjualan marketplace' : 'Laporan penjualan online marketplace')
+  return exportTableExcel({ ...table, title, columns, rows }, audit && /logam mulia/.test(table.title ?? '') ? 'Penjualan LM' : 'Penjualan Online', audit ? 'Pemeriksaan harga penjualan marketplace' : 'Laporan penjualan online marketplace')
 }
 
 export function exportSalesAuthorizationExcel(table: ExcelTable) {

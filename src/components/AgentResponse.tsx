@@ -545,8 +545,8 @@ function AgentTable({ block }: { block: Extract<AgentResponseBlock, {type: 'tabl
     return () => window.cancelAnimationFrame(frame)
   }, [visibleRows])
   const isMarketplaceSalesTable = /marketplace|penjualan\s+online|harga\s+online/i.test([block.title ?? '', ...block.columns].join(' '))
-  const isMarketplaceAudit = block.title === 'Audit harga penjualan marketplace perhiasan'
-  const isBuybackAudit = block.title === 'Audit harga buyback perhiasan'
+  const isMarketplaceAudit = /^Audit harga penjualan marketplace (?:perhiasan|logam mulia)$/.test(block.title ?? '')
+  const isBuybackAudit = /^Audit harga buyback (?:perhiasan|logam mulia)$/.test(block.title ?? '')
   const displayColumnIndexes = block.columns
     .map((column, index) => ({ column, index }))
     .filter(({ column }) => !(isBuybackAudit && /^sumber\s+barang$/i.test(column.trim())))
@@ -557,7 +557,7 @@ function AgentTable({ block }: { block: Extract<AgentResponseBlock, {type: 'tabl
     if (isMarketplaceAudit) return marketplaceStatusCell(block.columns[index], value)
     return isBuybackAudit && /keterangan/i.test(block.columns[index]) && typeof value === 'string' ? buybackAuditExplanation(value) : value
   }))
-  const isPriceAuditTable = /^(?:Audit harga (?:penjualan(?: marketplace)?|buyback) perhiasan|Daftar acuan pemeriksaan harga)$/.test(block.title ?? '')
+  const isPriceAuditTable = /^(?:Audit harga (?:penjualan(?: marketplace)?|buyback) perhiasan|Audit harga (?:buyback|penjualan marketplace) logam mulia|Daftar acuan pemeriksaan harga)$/.test(block.title ?? '')
   const isBankReconciliationTable = displayColumns.some(column => /status\s+pemeriksaan/i.test(column))
     && displayColumns.some(column => /nominal\s+bank/i.test(column))
     && displayColumns.some(column => /keterangan\s+pemeriksaan/i.test(column))

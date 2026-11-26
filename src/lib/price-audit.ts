@@ -1,7 +1,9 @@
 export type PriceRule = {
-  family: 'young' | 'old'; kind: 'sales' | 'buyback'; kadar: number | null; sourceCode: string;
+  family: 'young' | 'old' | 'bullion'; kind: 'sales' | 'buyback'; kadar: number | null; sourceCode: string;
   rate: number; maxRate: number | null; fee: number | null; feeType: 'nominal' | 'percent' | 'unknown'; condition: string; note: string;
   sourceRow?: string; printedKadar?: string; sourceLabel?: string;
+  bullionProduct?: 'ANTAM_YEAR' | 'ANTAM_REDMARK' | 'ANTAM_RETRO' | 'EMAS_KITA' | 'EMASKU' | 'UBS' | 'LOTUS_ARCHI' | 'NAMED_PRODUCT' | 'OTHER_LM'; bullionYear?: number | null; bullionWeightGram?: number | null;
+  bullionPriceBasis?: 'PER_GRAM' | 'PER_PIECE';
 }
 export type PriceReferenceSection = { date: string; batch?: number | null; effectiveFrom?: string | null; complete: boolean; warnings: string[]; rows: PriceRule[] }
 export type PriceReference = PriceReferenceSection & { id: string; filename: string; sections?: PriceReferenceSection[] }
